@@ -4,3 +4,4 @@
 apps/api/data/*.db
 dist
 coverage
+*.tsbuildinfo
