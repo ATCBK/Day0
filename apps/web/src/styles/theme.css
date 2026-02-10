@@ -1,0 +1,57 @@
+﻿:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --line: #dde2e8;
+  --text: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: radial-gradient(circle at top left, #ffffff 0%, #f2f5f8 60%, #e9eef5 100%);
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.left-nav {
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content-shell {
+  flex: 1;
+}
+
+.top-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 20px;
+}
+
+.page-body {
+  padding: 20px;
+}
+
+.canvas-wrapper {
+  height: 420px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.panel {
+  border: 1px dashed var(--line);
+  padding: 10px;
+}

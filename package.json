@@ -1,0 +1,16 @@
+{
+  "name": "project2-coze-p0",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @coze/web",
+    "dev:api": "npm run start:dev --workspace @coze/api",
+    "build": "npm run build --workspaces",
+    "build:web": "npm run build --workspace @coze/web",
+    "build:api": "npm run build --workspace @coze/api"
+  }
+}

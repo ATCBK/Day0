@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coze Workflow Clone - High Fidelity</title>
+    <style>
+        /* --- 核心变量 (Coze Style) --- */
+        :root {
+            --primary: #4e53e8; /* Coze Blue/Purple */
+            --primary-hover: #3d41c9;
+            --bg-canvas: #f2f3f5;
+            --bg-node: #ffffff;
+            --grid-dot: #dbdee4;
+            --text-main: #1d1c23;
+            --text-sub: #86909c;
+            --border: #e5e6eb;
+            --shadow: 0 4px 10px rgba(0,0,0,0.05), 0 0 2px rgba(0,0,0,0.06);
+            --shadow-selected: 0 0 0 2px var(--primary), 0 8px 20px rgba(78, 83, 232, 0.2);
+            
+            /* 节点颜色定义 */
+            --color-start: #4e53e8;
+            --color-if: #00b42a; /* Green */
+            --color-end: #f76560; /* Red/Orange */
+            --color-know: #ff7d00; /* Orange */
+            --color-agg: #14c9c9; /* Cyan - Aggregate */
+            --color-llm: #1f2329; /* Black - LLM */
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-canvas);
+            overflow: hidden;
+        }
+
+        /* --- 画布层 --- */
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+        }
+
+        #viewport.panning { cursor: grabbing; }
+
+        /* 变换层：负责缩放和平移 */
+        #transform-layer {
+            transform-origin: 0 0;
+            width: 100%; height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        /* 背景网格 */
+        .grid-background {
+            position: absolute;
+            top: -5000px; left: -5000px;
+            width: 10000px; height: 10000px;
+            background-image: radial-gradient(var(--grid-dot) 1.5px, transparent 1.5px);
+            background-size: 20px 20px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* SVG 连线层 */
+        svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        path.wire {
+            fill: none;
+            stroke: #c9cdd4;
+            stroke-width: 2px;
+            pointer-events: all;
+            transition: stroke 0.2s;
+            cursor: pointer;
+        }
+        
+        path.wire:hover { stroke: var(--primary); stroke-width: 3px; }
+        path.wire.temp { stroke: var(--primary); stroke-dasharray: 5; animation: dash 1s linear infinite; }
+
+        @keyframes dash { to { stroke-dashoffset: -10; } }
+
+        /* --- 节点样式 (核心) --- */
+        .node {
+            position: absolute;
+            width: 280px;
+            background: var(--bg-node);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid transparent;
+            z-index: 2;
+            transition: box-shadow 0.2s, transform 0.1s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .node:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+        .node.selected { 
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px var(--primary), 0 8px 20px rgba(78, 83, 232, 0.15); 
+            z-index: 10;
+        }
+
+        /* 节点头部 */
+        .node-header {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: move;
+        }
+
+        .node-icon {
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .node-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+            flex-grow: 1;
+        }
+
+        .node-tools { color: var(--text-sub); font-size: 12px; cursor: pointer; }
+
+        /* 节点内容区 */
+        .node-body {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 24px;
+            position: relative;
+        }
+
+        .param-label { color: var(--text-sub); }
+        .param-tag { 
+            background: #f2f3f5; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            color: var(--text-main); 
+            font-family: monospace;
+        }
+
+        /* --- 端口 (Ports) --- */
+        .port {
+            width: 10px; height: 10px;
+            background: #fff;
+            border: 2px solid #86909c;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%; 
+            transform: translateY(-50%);
+            cursor: crosshair;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+
+        .port:hover { border-color: var(--primary); background: var(--primary); transform: translateY(-50%) scale(1.2); }
+        .port.input { left: -6px; }
+        .port.output { right: -6px; }
+
+        /* --- 底部悬浮栏 --- */
+        .bottom-bar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .btn {
+            border: none;
+            background: transparent;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #f2f3f5; }
+        
+        .btn.primary { background: #e8fff0; color: #00b42a; font-weight: 600; } /* 试运行绿色 */
+        .btn.primary:hover { background: #d3f9e0; }
+
+        .btn.add { background: #eef0ff; color: var(--primary); }
+        .btn.add:hover { background: #e0e4ff; }
+
+        .zoom-info { font-size: 12px; color: var(--text-sub); margin: 0 10px; width: 40px; text-align: center;}
+
+        /* --- 自定义节点类型颜色 --- */
+        .type-start .node-icon { background: var(--color-start); }
+        .type-if .node-icon { background: var(--color-if); }
+        .type-end .node-icon { background: var(--color-end); }
+        .type-retrieve .node-icon { background: var(--color-know); }
+        .type-aggregate .node-icon { background: var(--color-agg); }
+        .type-llm .node-icon { background: var(--color-llm); }
+
+    </style>
+</head>
+<body>
+
+<div id="viewport">
+    <div id="transform-layer">
+        <div class="grid-background"></div>
+        <svg id="svg-layer"></svg>
+        <div id="node-layer"></div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <div class="zoom-info" id="zoom-text">100%</div>
+    <button class="btn add" onclick="showAddMenu()">
+        <span>+</span> 添加节点
+    </button>
+    <div style="width:1px; height:20px; background:#eee; margin:0 5px;"></div>
+    <button class="btn primary" onclick="alert('运行工作流...')">
+        <span>▶</span> 试运行
+    </button>
+</div>
+
+<!-- 简单的添加节点菜单 (模拟) -->
+<script>
+    // --- 状态管理 ---
+    const state = {
+        scale: 1,
+        pan: { x: 0, y: 0 },
+        isPanning: false,
+        startX: 0, startY: 0, // 鼠标按下位置
+        isDraggingNode: false,
+        dragNodeId: null,
+        dragOffset: { x: 0, y: 0 },
+        isConnecting: false,
+        connectSource: null, // { nodeId, portType, yOffset }
+        nodes: [],
+        edges: [] // { id, source, target, sourceHandle, targetHandle }
+    };
+
+    const viewport = document.getElementById('viewport');
+    const transformLayer = document.getElementById('transform-layer');
+    const nodeLayer = document.getElementById('node-layer');
+    const svgLayer = document.getElementById('svg-layer');
+    const zoomText = document.getElementById('zoom-text');
+
+    let tempPath = null; // 拖拽时的临时线
+
+    // --- 图标 SVG 字符串 ---
+    const Icons = {
+        start: `<svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`,
+        if: `<svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3v18M6 12h12m-3-3l3 3-3 3"/></svg>`, // 简化分支
+        end: `<svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>`,
+        retrieve: `<svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`,
+        aggregate: `<svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`,
+        llm: `<svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2a2 2 0 012 2v2a2 2 0 012 2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2 2v2a2 2 0 01-2 2 2 2 0 01-2-2v-2a2 2 0 01-2-2H6a2 2 0 01-2-2v-4a2 2 0 012-2h2a2 2 0 012-2V4a2 2 0 012-2z"/></svg>`
+    };
+
+    // --- 初始化节点数据定义 ---
+    function spawnNode(type, x, y) {
+        const id = 'node_' + Date.now() + Math.random().toString(36).substr(2, 5);
+        let config = {};
+
+        switch(type) {
+            case 'start':
+                config = { title: 'Start', type: 'start', icon: Icons.start, inputs: [], outputs: ['output'] };
+                break;
+            case 'if':
+                config = { title: 'If / Branch', type: 'if', icon: Icons.if, inputs: ['condition'], outputs: ['True', 'False'] };
+                break;
+            case 'end':
+                config = { title: 'End', type: 'end', icon: Icons.end, inputs: ['result'], outputs: [] };
+                break;
+            case 'retrieve':
+                config = { title: 'Retrieve', type: 'retrieve', icon: Icons.retrieve, inputs: ['query'], outputs: ['context'] };
+                break;
+            case 'aggregate':
+                config = { title: 'Aggregate', type: 'aggregate', icon: Icons.aggregate, inputs: ['var_a', 'var_b'], outputs: ['combined'] };
+                break;
+            case 'llm':
+                config = { title: 'LLM Model', type: 'llm', icon: Icons.llm, inputs: ['system', 'prompt'], outputs: ['answer'] };
+                break;
+        }
+
+        const node = { id, x, y, ...config };
+        state.nodes.push(node);
+        renderNode(node);
+    }
+
+    // --- 渲染单个节点 ---
+    function renderNode(node) {
+        const el = document.createElement('div');
+        el.className = `node type-${node.type}`;
+        el.id = node.id;
+        el.style.transform = `translate(${node.x}px, ${node.y}px)`;
+        
+        // 构造输入输出 HTML
+        let inputsHtml = node.inputs.map(input => `
+            <div class="param-row">
+                <div class="port input" data-handle="${input}"></div>
+                <span class="param-label">${input}</span>
+                <span class="param-tag">ref</span>
+            </div>
+        `).join('');
+
+        let outputsHtml = node.outputs.map(output => `
+            <div class="param-row" style="justify-content: flex-end;">
+                <span class="param-tag">string</span>
+                <span class="param-label" style="margin-left:8px">${output}</span>
+                <div class="port output" data-handle="${output}"></div>
+            </div>
+        `).join('');
+
+        el.innerHTML = `
+            <div class="node-header">
+                <div class="node-icon">${node.icon}</div>
+                <div class="node-title">${node.title}</div>
+                <div class="node-tools">···</div>
+            </div>
+            <div class="node-body">
+                ${inputsHtml}
+                ${outputsHtml}
+            </div>
+        `;
+
+        nodeLayer.appendChild(el);
+
+        // 绑定事件
+        const header = el.querySelector('.node-header');
+        header.addEventListener('mousedown', (e) => startDragNode(e, node.id));
+        
+        el.addEventListener('mousedown', () => selectNode(node.id));
+
+        // 端口连线事件
+        el.querySelectorAll('.port').forEach(port => {
+            port.addEventListener('mousedown', (e) => startConnection(e, node.id, port));
+        });
+    }
+
+    // --- 交互逻辑：节点拖拽 ---
+    function startDragNode(e, id) {
+        e.stopPropagation();
+        state.isDraggingNode = true;
+        state.dragNodeId = id;
+        const node = state.nodes.find(n => n.id === id);
+        
+        // 计算鼠标点击点相对于节点左上角的偏移 (考虑缩放)
+        state.dragOffset.x = (e.clientX - state.pan.x) / state.scale - node.x;
+        state.dragOffset.y = (e.clientY - state.pan.y) / state.scale - node.y;
+    }
+
+    // --- 交互逻辑：连线 ---
+    function startConnection(e, nodeId, portEl) {
+        e.stopPropagation();
+        e.preventDefault(); // 防止选中文本
+        if (portEl.classList.contains('input')) return; // 只能从 output 开始连
+
+        state.isConnecting = true;
+        
+        // 获取端口相对于变换层的精确坐标
+        const portRect = portEl.getBoundingClientRect();
+        const startX = (portRect.left + portRect.width/2 - state.pan.x) / state.scale;
+        const startY = (portRect.top + portRect.height/2 - state.pan.y) / state.scale;
+
+        state.connectSource = { nodeId, handle: portEl.dataset.handle, x: startX, y: startY };
+
+        // 创建临时 SVG 线
+        tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        tempPath.classList.add('wire', 'temp');
+        svgLayer.appendChild(tempPath);
+    }
+
+    // --- 全局交互 (鼠标移动) ---
+    window.addEventListener('mousemove', (e) => {
+        // 1. 平移画布
+        if (state.isPanning) {
+            state.pan.x += e.movementX;
+            state.pan.y += e.movementY;
+            updateTransform();
+        }
+
+        // 2. 拖拽节点
+        if (state.isDraggingNode) {
+            const x = (e.clientX - state.pan.x) / state.scale - state.dragOffset.x;
+            const y = (e.clientY - state.pan.y) / state.scale - state.dragOffset.y;
+            
+            const node = state.nodes.find(n => n.id === state.dragNodeId);
+            node.x = x;
+            node.y = y;
+            
+            const el = document.getElementById(node.id);
+            el.style.transform = `translate(${x}px, ${y}px)`;
+            
+            updateEdges(); // 更新所有连线
+        }
+
+        // 3. 拖拽连线
+        if (state.isConnecting && tempPath) {
+            const mouseX = (e.clientX - state.pan.x) / state.scale;
+            const mouseY = (e.clientY - state.pan.y) / state.scale;
+            
+            const d = getBezierPath(state.connectSource.x, state.connectSource.y, mouseX, mouseY);
+            tempPath.setAttribute('d', d);
+        }
+    });
+
+    // --- 全局交互 (鼠标松开) ---
+    window.addEventListener('mouseup', (e) => {
+        state.isDraggingNode = false;
+        state.isPanning = false;
+        viewport.classList.remove('panning');
+
+        // 结束连线
+        if (state.isConnecting) {
+            const target = e.target;
+            // 如果释放到了输入端口上
+            if (target.classList.contains('port') && target.classList.contains('input')) {
+                const targetNodeId = target.closest('.node').id;
+                // 防止自连
+                if (targetNodeId !== state.connectSource.nodeId) {
+                    createEdge(state.connectSource.nodeId, targetNodeId, state.connectSource.handle, target.dataset.handle);
+                }
+            }
+            if (tempPath) tempPath.remove();
+            state.isConnecting = false;
+            tempPath = null;
+        }
+    });
+
+    // --- 交互逻辑：平移画布 (空格或中键) ---
+    viewport.addEventListener('mousedown', (e) => {
+        // 中键或按住空格左键
+        if (e.button === 1 || (e.button === 0 && e.target === viewport)) {
+            state.isPanning = true;
+            viewport.classList.add('panning');
+        }
+    });
+
+    // --- 交互逻辑：缩放画布 ---
+    viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomIntensity = 0.1;
+        const newScale = e.deltaY < 0 ? state.scale * (1 + zoomIntensity) : state.scale * (1 - zoomIntensity);
+        
+        // 限制缩放范围
+        state.scale = Math.min(Math.max(0.2, newScale), 3);
+        
+        zoomText.innerText = Math.round(state.scale * 100) + '%';
+        updateTransform();
+    }, { passive: false });
+
+
+    // --- 核心工具函数 ---
+
+    function updateTransform() {
+        transformLayer.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
+        // 背景移动以模拟无限感
+        document.querySelector('.grid-background').style.backgroundPosition = `${state.pan.x}px ${state.pan.y}px`;
+    }
+
+    function createEdge(sourceId, targetId, sourceHandle, targetHandle) {
+        state.edges.push({ source: sourceId, target: targetId, sourceHandle, targetHandle });
+        updateEdges();
+    }
+
+    function updateEdges() {
+        // 清空旧线
+        svgLayer.innerHTML = '';
+        if (tempPath && state.isConnecting) svgLayer.appendChild(tempPath);
+
+        state.edges.forEach(edge => {
+            const sourceNode = document.getElementById(edge.source);
+            const targetNode = document.getElementById(edge.target);
+            
+            // 找到具体的端口元素
+            const sourcePort = sourceNode.querySelector(`.port.output[data-handle="${edge.sourceHandle}"]`);
+            const targetPort = targetNode.querySelector(`.port.input[data-handle="${edge.targetHandle}"]`);
+
+            if (!sourcePort || !targetPort) return;
+
+            const p1 = getCenter(sourcePort);
+            const p2 = getCenter(targetPort);
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.classList.add('wire');
+            path.setAttribute('d', getBezierPath(p1.x, p1.y, p2.x, p2.y));
+            svgLayer.appendChild(path);
+        });
+    }
+
+    function getCenter(el) {
+        const rect = el.getBoundingClientRect();
+        return {
+            x: (rect.left + rect.width/2 - state.pan.x) / state.scale,
+            y: (rect.top + rect.height/2 - state.pan.y) / state.scale
+        };
+    }
+
+    function getBezierPath(x1, y1, x2, y2) {
+        const dist = Math.abs(x2 - x1);
+        const cp1x = x1 + dist * 0.4; // 控制点1 X
+        const cp2x = x2 - dist * 0.4; // 控制点2 X
+        return `M ${x1} ${y1} C ${cp1x} ${y1}, ${cp2x} ${y2}, ${x2} ${y2}`;
+    }
+
+    function selectNode(id) {
+        document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+        document.getElementById(id).classList.add('selected');
+    }
+
+    // 模拟添加菜单
+    function showAddMenu() {
+        // 简单随机添加一个节点用于演示
+        const types = ['start', 'if', 'retrieve', 'aggregate', 'llm', 'end'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        // 在屏幕中心添加
+        const centerX = (-state.pan.x + window.innerWidth/2) / state.scale - 140;
+        const centerY = (-state.pan.y + window.innerHeight/2) / state.scale - 100;
+        spawnNode(type, centerX, centerY);
+    }
+
+    // --- 初始化演示场景 ---
+    window.onload = () => {
+        // 默认位置
+        state.pan.x = window.innerWidth / 2 - 400;
+        state.pan.y = window.innerHeight / 2 - 300;
+        updateTransform();
+
+        // 创建第一层
+        spawnNode('start', 50, 250);
+        spawnNode('retrieve', 400, 150);
+        spawnNode('if', 400, 400);
+        
+        // 创建第二层
+        spawnNode('aggregate', 800, 250);
+        
+        // 创建第三层
+        spawnNode('llm', 1200, 250);
+        
+        // 终点
+        spawnNode('end', 1600, 250);
+
+        // 模拟一些连线
+        setTimeout(() => {
+           createEdge(state.nodes[0].id, state.nodes[1].id, 'output', 'query'); // Start -> Retrieve
+           createEdge(state.nodes[0].id, state.nodes[2].id, 'output', 'condition'); // Start -> If
+        }, 100);
+    };
+
+</script>
+
+</body>
+</html>

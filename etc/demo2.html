@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Workflow Builder Demo (Single HTML)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#0f1624;
+      --panel2:#121b2c;
+      --card:#111a2b;
+      --card2:#0f1728;
+      --line:#22304a;
+      --text:#d7e2ff;
+      --muted:#9bb0d6;
+      --accent:#6ea8ff;
+      --ok:#33d6a6;
+      --warn:#ffcc66;
+      --err:#ff6b6b;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 12px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; }
+    button, input, select, textarea{ font: inherit; }
+
+    .app{ display:flex; flex-direction:column; height:100%; }
+
+    /* Top bar */
+    .topbar{
+      height:56px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 0 14px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.00));
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:650;
+      letter-spacing:.2px;
+    }
+    .pill{
+      font-size:12px; color:var(--muted);
+      padding:4px 10px; border:1px solid rgba(255,255,255,.10); border-radius:999px;
+      background: rgba(255,255,255,.03);
+    }
+    .top-actions{ display:flex; align-items:center; gap:10px; }
+    .btn{
+      padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      cursor:pointer;
+      transition: .15s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(255,255,255,.07); }
+    .btn.primary{
+      background: rgba(110,168,255,.18);
+      border-color: rgba(110,168,255,.45);
+    }
+    .btn.primary:hover{ background: rgba(110,168,255,.24); }
+    .btn.green{
+      background: rgba(51,214,166,.16);
+      border-color: rgba(51,214,166,.45);
+    }
+    .btn.green:hover{ background: rgba(51,214,166,.22); }
+
+    /* Main */
+    .main{
+      flex:1;
+      display:flex;
+      min-height:0;
+    }
+
+    /* Left panel (palette) */
+    .left{
+      width:260px;
+      background: rgba(255,255,255,.02);
+      border-right:1px solid rgba(255,255,255,.06);
+      padding:12px;
+      display:flex; flex-direction:column; gap:12px;
+    }
+    .panel-title{
+      font-size:13px; color:var(--muted);
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:2px;
+    }
+    .node-list{ display:flex; flex-direction:column; gap:8px; }
+    .node-item{
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      cursor:grab;
+      user-select:none;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .node-item:active{ cursor:grabbing; }
+    .node-item .meta{ display:flex; flex-direction:column; gap:2px; }
+    .node-item .name{ font-weight:650; font-size:13px; }
+    .node-item .desc{ font-size:12px; color:var(--muted); }
+    .kbd{
+      font-size:11px; color:rgba(255,255,255,.65);
+      border:1px solid rgba(255,255,255,.18);
+      padding:2px 6px; border-radius:8px;
+      background: rgba(0,0,0,.22);
+      white-space:nowrap;
+    }
+
+    /* Canvas area */
+    .center{
+      flex:1;
+      position:relative;
+      min-width:0;
+      overflow:hidden;
+    }
+
+    .canvas-wrap{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,.10) 1px, transparent 1px) 0 0 / 22px 22px,
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+    }
+
+    /* The transform root (panned+zoomed) */
+    .world{
+      position:absolute; left:0; top:0;
+      width:100%; height:100%;
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+
+    svg.edges{
+      position:absolute; inset:0;
+      overflow:visible;
+      pointer-events:none;
+    }
+
+    .nodes-layer{
+      position:absolute; inset:0;
+    }
+
+    /* Node card */
+    .node{
+      position:absolute;
+      width:220px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      user-select:none;
+    }
+    .node.selected{ outline:2px solid rgba(110,168,255,.75); }
+    .node-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 10px 6px 10px;
+      gap:10px;
+    }
+    .node-title{
+      display:flex; align-items:center; gap:8px;
+      font-weight:700; font-size:13px;
+    }
+    .badge{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      color:rgba(255,255,255,.70);
+      background: rgba(0,0,0,.20);
+    }
+    .node-body{
+      padding: 0 10px 10px 10px;
+      display:flex; gap:10px;
+    }
+    .io-col{
+      flex:1;
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .io-label{ font-size:12px; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
+    .io-pill{
+      font-size:11px;
+      color:rgba(255,255,255,.75);
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:8px;
+    }
+
+    /* Ports */
+    .port{
+      width:10px; height:10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.35);
+      background: rgba(110,168,255,.25);
+      flex: 0 0 auto;
+    }
+    .port.in{
+      background: rgba(51,214,166,.18);
+      border-color: rgba(51,214,166,.55);
+    }
+    .port.out{
+      background: rgba(110,168,255,.20);
+      border-color: rgba(110,168,255,.55);
+    }
+    .port.hit{
+      outline: 3px solid rgba(255,255,255,.25);
+      outline-offset:2px;
+    }
+
+    /* Right panel (inspector) */
+    .right{
+      width:320px;
+      background: rgba(255,255,255,.02);
+      border-left:1px solid rgba(255,255,255,.06);
+      padding:12px;
+      display:flex; flex-direction:column; gap:10px;
+      min-height:0;
+    }
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background: rgba(255,255,255,.03);
+      padding:10px;
+    }
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:13px; color:rgba(255,255,255,.85);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .field{ display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .field label{ font-size:12px; color:var(--muted); }
+    .field input, .field select, .field textarea{
+      width:100%;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      color:var(--text);
+      padding:8px 10px;
+      outline:none;
+    }
+    .field textarea{ min-height:90px; resize:vertical; }
+
+    /* Bottom toolbar */
+    .bottom{
+      position:absolute; left:14px; right:14px; bottom:12px;
+      display:flex; align-items:center; justify-content:space-between;
+      pointer-events:none;
+    }
+    .toolbar{
+      display:flex; align-items:center; gap:10px;
+      pointer-events:auto;
+    }
+    .zoom{
+      display:flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      background: rgba(0,0,0,.22);
+    }
+    .zoom .pct{ width:52px; text-align:center; color:rgba(255,255,255,.82); font-size:12px; }
+    .hint{
+      pointer-events:auto;
+      font-size:12px; color:rgba(255,255,255,.65);
+      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+      background: rgba(0,0,0,.22);
+      max-width: 52ch;
+    }
+
+    /* Toast */
+    .toast{
+      position:absolute; left:50%; top:12px; transform:translateX(-50%);
+      padding:8px 12px;
+      border-radius:12px;
+      background: rgba(0,0,0,.50);
+      border:1px solid rgba(255,255,255,.12);
+      color:rgba(255,255,255,.85);
+      font-size:12px;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .2s ease;
+    }
+    .toast.show{ opacity:1; }
+
+    /* Edge styles */
+    .edge-path{
+      stroke: rgba(110,168,255,.75);
+      stroke-width: 2.2;
+      fill: none;
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,.35));
+    }
+    .edge-path.ok{
+      stroke: rgba(51,214,166,.85);
+    }
+    .edge-path.preview{
+      stroke-dasharray: 6 6;
+      stroke: rgba(255,255,255,.55);
+    }
+
+    .run-badge{
+      font-size:11px; padding:2px 8px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.24);
+      color: rgba(255,255,255,.78);
+    }
+    .run-badge.running{ border-color: rgba(110,168,255,.55); color: rgba(110,168,255,.95); }
+    .run-badge.success{ border-color: rgba(51,214,166,.55); color: rgba(51,214,166,.95); }
+    .run-badge.error{ border-color: rgba(255,107,107,.55); color: rgba(255,107,107,.95); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <span style="display:inline-flex;width:28px;height:28px;border-radius:9px;background:rgba(110,168,255,.18);border:1px solid rgba(110,168,255,.4);align-items:center;justify-content:center;">🧩</span>
+      <span>coze-like 工作流设计器（Demo）</span>
+      <span class="pill" id="statusPill">草稿已保存</span>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="btnFit">适配视图</button>
+      <button class="btn primary" id="btnPublish">发布（Demo）</button>
+      <button class="btn green" id="btnRun">试运行</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="left">
+      <div class="panel-title">
+        <span>节点库（拖到画布）</span>
+        <span class="kbd">拖拽</span>
+      </div>
+      <div class="node-list" id="palette">
+        <div class="node-item" draggable="true" data-type="start">
+          <div class="meta">
+            <div class="name">开始</div>
+            <div class="desc">流程入口</div>
+          </div>
+          <div class="kbd">Start</div>
+        </div>
+        <div class="node-item" draggable="true" data-type="wait">
+          <div class="meta">
+            <div class="name">time_wait</div>
+            <div class="desc">延时等待</div>
+          </div>
+          <div class="kbd">Wait</div>
+        </div>
+        <div class="node-item" draggable="true" data-type="llm">
+          <div class="meta">
+            <div class="name">大模型</div>
+            <div class="desc">LLM 调用</div>
+          </div>
+          <div class="kbd">LLM</div>
+        </div>
+        <div class="node-item" draggable="true" data-type="end">
+          <div class="meta">
+            <div class="name">结束</div>
+            <div class="desc">流程出口</div>
+          </div>
+          <div class="kbd">End</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>快捷操作</h3>
+        <div style="display:flex;flex-direction:column;gap:6px;color:rgba(255,255,255,.72);font-size:12px;line-height:1.4">
+          <div><span class="kbd">滚轮</span> 缩放　<span class="kbd">空白拖拽</span> 平移</div>
+          <div><span class="kbd">点端口拖拽</span> 连线</div>
+          <div><span class="kbd">Delete</span> 删除选中节点</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="center" id="center">
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="toast" id="toast"></div>
+
+        <!-- world = panning/zooming root -->
+        <div class="world" id="world">
+          <svg class="edges" id="edgesSvg">
+            <path id="previewPath" class="edge-path preview" d="" />
+          </svg>
+          <div class="nodes-layer" id="nodesLayer"></div>
+        </div>
+
+        <div class="bottom">
+          <div class="toolbar">
+            <div class="zoom">
+              <button class="btn" id="zoomOut" title="缩小">－</button>
+              <div class="pct" id="zoomPct">100%</div>
+              <button class="btn" id="zoomIn" title="放大">＋</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="btnAddNode">+ 添加节点</button>
+            <div class="hint">提示：拖拽节点 → 端口连线 → 右侧配置 → “试运行” 看节点依次点亮</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="card" id="inspector">
+        <h3>节点配置 <span class="kbd" id="selId">未选中</span></h3>
+        <div id="inspectorBody" style="color:rgba(255,255,255,.72);font-size:12px;line-height:1.5">
+          点击画布上的节点以查看/编辑参数。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>变量（Demo）</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span class="pill">sys_images</span>
+          <span class="pill">input_text</span>
+          <span class="pill">llm_output</span>
+        </div>
+        <div style="margin-top:10px;color:rgba(255,255,255,.70);font-size:12px;line-height:1.5">
+          Demo 里变量不做真实解析，只展示“可配置”的感觉。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>运行日志（Demo）</h3>
+        <div id="runLog" style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; color:rgba(255,255,255,.75); white-space:pre-wrap; line-height:1.45; max-height: 280px; overflow:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ----------------------------
+  // State
+  // ----------------------------
+  const state = {
+    nodes: new Map(),   // id -> {id,type,title,x,y, data, status}
+    edges: new Map(),   // id -> {id, from:{nodeId,port}, to:{nodeId,port}}
+    selectedNodeId: null,
+
+    // viewport
+    scale: 1,
+    panX: 0,
+    panY: 0,
+
+    // interactions
+    draggingNodeId: null,
+    dragOffset: {x:0,y:0},
+
+    panning: false,
+    panStart: {x:0,y:0, panX:0, panY:0},
+
+    connecting: null, // {fromNodeId, fromPort, startScreen:{x,y}}
+    hoverPortEl: null,
+
+    dirty: false,
+    running: false,
+  };
+
+  // ----------------------------
+  // DOM
+  // ----------------------------
+  const center = document.getElementById('center');
+  const canvasWrap = document.getElementById('canvasWrap');
+  const world = document.getElementById('world');
+  const nodesLayer = document.getElementById('nodesLayer');
+  const edgesSvg = document.getElementById('edgesSvg');
+  const previewPath = document.getElementById('previewPath');
+  const zoomPct = document.getElementById('zoomPct');
+  const statusPill = document.getElementById('statusPill');
+  const toast = document.getElementById('toast');
+  const inspectorBody = document.getElementById('inspectorBody');
+  const selId = document.getElementById('selId');
+  const runLog = document.getElementById('runLog');
+
+  const btnZoomIn = document.getElementById('zoomIn');
+  const btnZoomOut = document.getElementById('zoomOut');
+  const btnFit = document.getElementById('btnFit');
+  const btnPublish = document.getElementById('btnPublish');
+  const btnRun = document.getElementById('btnRun');
+  const btnAddNode = document.getElementById('btnAddNode');
+
+  // ----------------------------
+  // Utils
+  // ----------------------------
+  const uid = (p='n') => p + Math.random().toString(16).slice(2, 10);
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1500);
+  }
+
+  function setDirty(d=true){
+    state.dirty = d;
+    statusPill.textContent = d ? '未保存（Demo）' : '草稿已保存';
+    statusPill.style.borderColor = d ? 'rgba(255,204,102,.45)' : 'rgba(255,255,255,.10)';
+    statusPill.style.color = d ? 'rgba(255,204,102,.95)' : 'var(--muted)';
+  }
+
+  function log(msg){
+    const t = new Date();
+    const ts = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
+    runLog.textContent += `[${ts}] ${msg}\n`;
+    runLog.scrollTop = runLog.scrollHeight;
+  }
+
+  function applyTransform(){
+    world.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
+    zoomPct.textContent = Math.round(state.scale * 100) + '%';
+    renderEdges();
+  }
+
+  // screen -> world coordinates (world space before transform)
+  function screenToWorld(sx, sy){
+    const rect = canvasWrap.getBoundingClientRect();
+    const x = (sx - rect.left - state.panX) / state.scale;
+    const y = (sy - rect.top - state.panY) / state.scale;
+    return {x,y};
+  }
+
+  function worldToScreen(wx, wy){
+    const rect = canvasWrap.getBoundingClientRect();
+    const sx = rect.left + state.panX + wx * state.scale;
+    const sy = rect.top + state.panY + wy * state.scale;
+    return {x:sx,y:sy};
+  }
+
+  function nodeDefaults(type){
+    if(type === 'start'){
+      return { title:'开始', inputs:[], outputs:[{name:'input', type:'str'}], data:{} };
+    }
+    if(type === 'end'){
+      return { title:'结束', inputs:[{name:'output', type:'str'}], outputs:[], data:{} };
+    }
+    if(type === 'wait'){
+      return { title:'time_wait', inputs:[{name:'in', type:'str'}], outputs:[{name:'out', type:'str'}], data:{ seconds: 1, message:'success' } };
+    }
+    if(type === 'llm'){
+      return { title:'大模型', inputs:[{name:'input', type:'str'}], outputs:[{name:'output', type:'str'}], data:{ model:'gpt-4.1-mini', temperature:0.7, prompt:'你是一个有帮助的助手。' } };
+    }
+    return { title:'节点', inputs:[{name:'in', type:'str'}], outputs:[{name:'out', type:'str'}], data:{} };
+  }
+
+  // ----------------------------
+  // Node/Edge creation
+  // ----------------------------
+  function addNode(type, wx, wy){
+    const id = uid('n');
+    const def = nodeDefaults(type);
+    const node = {
+      id, type,
+      title: def.title,
+      x: wx, y: wy,
+      inputs: def.inputs,
+      outputs: def.outputs,
+      data: def.data,
+      status: 'idle', // idle|running|success|error
+    };
+    state.nodes.set(id, node);
+    renderNode(node);
+    setDirty(true);
+    selectNode(id);
+    return id;
+  }
+
+  function addEdge(fromNodeId, fromPortName, toNodeId, toPortName){
+    // prevent duplicates
+    for(const e of state.edges.values()){
+      if(e.from.nodeId===fromNodeId && e.from.port===fromPortName && e.to.nodeId===toNodeId && e.to.port===toPortName){
+        showToast('已存在相同连线');
+        return null;
+      }
+    }
+    // simple rule: avoid self-loop
+    if(fromNodeId === toNodeId){
+      showToast('不允许连接到自身（Demo）');
+      return null;
+    }
+    const id = uid('e');
+    const edge = {
+      id,
+      from: {nodeId: fromNodeId, port: fromPortName},
+      to: {nodeId: toNodeId, port: toPortName},
+    };
+    state.edges.set(id, edge);
+    renderEdges();
+    setDirty(true);
+    return id;
+  }
+
+  function removeNode(nodeId){
+    // remove edges connected
+    for(const [eid, e] of [...state.edges.entries()]){
+      if(e.from.nodeId===nodeId || e.to.nodeId===nodeId) state.edges.delete(eid);
+    }
+    state.nodes.delete(nodeId);
+    const el = document.querySelector(`.node[data-id="${nodeId}"]`);
+    if(el) el.remove();
+    if(state.selectedNodeId === nodeId) selectNode(null);
+    renderEdges();
+    setDirty(true);
+  }
+
+  // ----------------------------
+  // Rendering
+  // ----------------------------
+  function renderNode(node){
+    let el = document.querySelector(`.node[data-id="${node.id}"]`);
+    if(!el){
+      el = document.createElement('div');
+      el.className = 'node';
+      el.dataset.id = node.id;
+
+      el.innerHTML = `
+        <div class="node-header">
+          <div class="node-title">
+            <span class="badge">${escapeHtml(node.type)}</span>
+            <span class="title-text">${escapeHtml(node.title)}</span>
+          </div>
+          <span class="run-badge" data-role="status">idle</span>
+        </div>
+        <div class="node-body">
+          <div class="io-col" data-role="in"></div>
+          <div class="io-col" data-role="out"></div>
+        </div>
+      `;
+
+      nodesLayer.appendChild(el);
+
+      // Select on click (but not when starting drag from port)
+      el.addEventListener('mousedown', (ev) => {
+        if(ev.button !== 0) return;
+        const target = ev.target;
+        if(target && target.classList && target.classList.contains('port')) return;
+        selectNode(node.id);
+
+        // start drag node
+        const {x,y} = screenToWorld(ev.clientX, ev.clientY);
+        state.draggingNodeId = node.id;
+        state.dragOffset.x = x - node.x;
+        state.dragOffset.y = y - node.y;
+        ev.stopPropagation();
+      });
+
+      // prevent default drag ghost
+      el.addEventListener('dragstart', (e)=>e.preventDefault());
+    }
+
+    // position
+    el.style.left = node.x + 'px';
+    el.style.top  = node.y + 'px';
+
+    // title + type
+    el.querySelector('.title-text').textContent = node.title;
+    el.querySelector('.badge').textContent = node.type;
+
+    // status
+    const statusEl = el.querySelector('[data-role="status"]');
+    statusEl.textContent = node.status;
+    statusEl.className = 'run-badge ' + (node.status === 'running' ? 'running' : node.status === 'success' ? 'success' : node.status === 'error' ? 'error' : '');
+
+    // IO
+    const inCol = el.querySelector('[data-role="in"]');
+    const outCol = el.querySelector('[data-role="out"]');
+    inCol.innerHTML = '';
+    outCol.innerHTML = '';
+
+    const mkRow = (kind, port) => {
+      const row = document.createElement('div');
+      row.className = 'io-pill';
+      row.innerHTML = `
+        <span style="display:flex;align-items:center;gap:8px;">
+          ${kind==='in' ? `<span class="port in" data-kind="in" data-port="${escapeHtml(port.name)}"></span>` : ''}
+          <span>${escapeHtml(port.type)}: ${escapeHtml(port.name)}</span>
+          ${kind==='out' ? `<span class="port out" data-kind="out" data-port="${escapeHtml(port.name)}"></span>` : ''}
+        </span>
+      `;
+
+      const portEl = row.querySelector('.port');
+      if(portEl){
+        portEl.addEventListener('mousedown', (ev) => {
+          ev.stopPropagation();
+          if(ev.button !== 0) return;
+
+          // only start from out port
+          const kind2 = portEl.dataset.kind;
+          const pname = portEl.dataset.port;
+
+          if(kind2 === 'out'){
+            selectNode(node.id);
+            state.connecting = {
+              fromNodeId: node.id,
+              fromPort: pname,
+            };
+            // show preview start at this port
+            renderPreviewPath(ev.clientX, ev.clientY);
+          }
+        });
+
+        // hover highlight for in-ports during connect
+        portEl.addEventListener('mouseenter', () => {
+          if(state.connecting && portEl.dataset.kind === 'in'){
+            portEl.classList.add('hit');
+            state.hoverPortEl = portEl;
+          }
+        });
+        portEl.addEventListener('mouseleave', () => {
+          portEl.classList.remove('hit');
+          if(state.hoverPortEl === portEl) state.hoverPortEl = null;
+        });
+
+        // drop connection on in-port
+        portEl.addEventListener('mouseup', (ev) => {
+          if(!state.connecting) return;
+          if(portEl.dataset.kind !== 'in') return;
+          ev.stopPropagation();
+          const toNodeId = node.id;
+          const toPort = portEl.dataset.port;
+
+          // basic type check
+          const fromNode = state.nodes.get(state.connecting.fromNodeId);
+          const outPort = (fromNode.outputs || []).find(p => p.name === state.connecting.fromPort);
+          const inPort = (node.inputs || []).find(p => p.name === toPort);
+
+          if(outPort && inPort && outPort.type !== inPort.type){
+            showToast(`类型不匹配：${outPort.type} → ${inPort.type}`);
+            cancelConnect();
+            return;
+          }
+
+          addEdge(state.connecting.fromNodeId, state.connecting.fromPort, toNodeId, toPort);
+          cancelConnect();
+        });
+      }
+
+      return row;
+    };
+
+    const inLabel = document.createElement('div');
+    inLabel.className = 'io-label';
+    inLabel.innerHTML = `<span>输入</span><span class="kbd">${(node.inputs||[]).length}</span>`;
+    inCol.appendChild(inLabel);
+    (node.inputs||[]).forEach(p => inCol.appendChild(mkRow('in', p)));
+
+    const outLabel = document.createElement('div');
+    outLabel.className = 'io-label';
+    outLabel.innerHTML = `<span>输出</span><span class="kbd">${(node.outputs||[]).length}</span>`;
+    outCol.appendChild(outLabel);
+    (node.outputs||[]).forEach(p => outCol.appendChild(mkRow('out', p)));
+  }
+
+  function clearEdgesSvg(){
+    // remove all real edges except previewPath
+    const paths = [...edgesSvg.querySelectorAll('path')].filter(p => p.id !== 'previewPath');
+    paths.forEach(p => p.remove());
+  }
+
+  function getPortWorldPos(nodeId, portKind, portName){
+    const nodeEl = document.querySelector(`.node[data-id="${nodeId}"]`);
+    if(!nodeEl) return null;
+    const portEl = nodeEl.querySelector(`.port.${portKind}[data-port="${CSS.escape(portName)}"]`);
+    if(!portEl) return null;
+
+    // port center in screen coordinates
+    const r = portEl.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+
+    // convert screen -> world
+    const w = screenToWorld(cx, cy);
+    return w;
+  }
+
+  function cubicPath(x1,y1,x2,y2){
+    const dx = Math.max(60, Math.abs(x2-x1)*0.35);
+    const c1x = x1 + dx;
+    const c1y = y1;
+    const c2x = x2 - dx;
+    const c2y = y2;
+    return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
+  }
+
+  function renderEdges(){
+    clearEdgesSvg();
+    for(const e of state.edges.values()){
+      const a = getPortWorldPos(e.from.nodeId, 'out', e.from.port);
+      const b = getPortWorldPos(e.to.nodeId, 'in', e.to.port);
+      if(!a || !b) continue;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('class','edge-path ok');
+      path.setAttribute('d', cubicPath(a.x, a.y, b.x, b.y));
+      edgesSvg.appendChild(path);
+    }
+  }
+
+  function renderPreviewPath(screenX, screenY){
+    if(!state.connecting) { previewPath.setAttribute('d',''); return; }
+    const from = getPortWorldPos(state.connecting.fromNodeId, 'out', state.connecting.fromPort);
+    if(!from){ previewPath.setAttribute('d',''); return; }
+    const to = screenToWorld(screenX, screenY);
+    previewPath.setAttribute('d', cubicPath(from.x, from.y, to.x, to.y));
+  }
+
+  function cancelConnect(){
+    state.connecting = null;
+    previewPath.setAttribute('d','');
+    if(state.hoverPortEl){
+      state.hoverPortEl.classList.remove('hit');
+      state.hoverPortEl = null;
+    }
+  }
+
+  function renderAll(){
+    for(const n of state.nodes.values()) renderNode(n);
+    renderEdges();
+    applyTransform();
+  }
+
+  function selectNode(nodeId){
+    state.selectedNodeId = nodeId;
+
+    document.querySelectorAll('.node').forEach(el => {
+      el.classList.toggle('selected', el.dataset.id === nodeId);
+    });
+
+    if(!nodeId){
+      selId.textContent = '未选中';
+      inspectorBody.innerHTML = '点击画布上的节点以查看/编辑参数。';
+      return;
+    }
+    selId.textContent = nodeId;
+
+    const node = state.nodes.get(nodeId);
+    if(!node) return;
+
+    inspectorBody.innerHTML = buildInspector(node);
+    wireInspector(node);
+  }
+
+  function buildInspector(node){
+    // Node specific forms
+    const common = `
+      <div class="field">
+        <label>节点标题</label>
+        <input id="f_title" value="${escapeAttr(node.title)}" />
+      </div>
+      <div class="field">
+        <label>节点类型</label>
+        <input value="${escapeAttr(node.type)}" disabled />
+      </div>
+    `;
+
+    if(node.type === 'wait'){
+      return `
+        <div style="color:rgba(255,255,255,.78);font-size:12px;line-height:1.5">
+          <div class="pill" style="display:inline-block;margin-bottom:8px;">延时节点参数</div>
+        </div>
+        ${common}
+        <div class="field">
+          <label>seconds（等待秒数）</label>
+          <input id="f_seconds" type="number" min="0" step="1" value="${escapeAttr(String(node.data.seconds ?? 1))}" />
+        </div>
+        <div class="field">
+          <label>message（输出标记）</label>
+          <input id="f_message" value="${escapeAttr(node.data.message ?? 'success')}" />
+        </div>
+      `;
+    }
+
+    if(node.type === 'llm'){
+      return `
+        <div style="color:rgba(255,255,255,.78);font-size:12px;line-height:1.5">
+          <div class="pill" style="display:inline-block;margin-bottom:8px;">大模型节点参数（Demo）</div>
+        </div>
+        ${common}
+        <div class="field">
+          <label>model</label>
+          <select id="f_model">
+            ${['gpt-4.1-mini','gpt-4.1','gpt-4o-mini','gpt-4o'].map(m => `
+              <option value="${escapeAttr(m)}" ${node.data.model===m?'selected':''}>${escapeHtml(m)}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>temperature</label>
+          <input id="f_temp" type="number" min="0" max="2" step="0.1" value="${escapeAttr(String(node.data.temperature ?? 0.7))}" />
+        </div>
+        <div class="field">
+          <label>prompt</label>
+          <textarea id="f_prompt">${escapeHtml(node.data.prompt ?? '')}</textarea>
+        </div>
+      `;
+    }
+
+    return `
+      <div style="color:rgba(255,255,255,.78);font-size:12px;line-height:1.5">
+        <div class="pill" style="display:inline-block;margin-bottom:8px;">通用节点参数</div>
+      </div>
+      ${common}
+      <div class="field">
+        <label>备注（Demo）</label>
+        <textarea id="f_note">${escapeHtml(node.data.note ?? '')}</textarea>
+      </div>
+    `;
+  }
+
+  function wireInspector(node){
+    const title = document.getElementById('f_title');
+    if(title){
+      title.addEventListener('input', () => {
+        node.title = title.value.trim() || node.title;
+        renderNode(node);
+        renderEdges();
+        setDirty(true);
+      });
+    }
+
+    if(node.type === 'wait'){
+      const sec = document.getElementById('f_seconds');
+      const msg = document.getElementById('f_message');
+      if(sec){
+        sec.addEventListener('input', () => {
+          node.data.seconds = Math.max(0, parseInt(sec.value || '0', 10));
+          setDirty(true);
+        });
+      }
+      if(msg){
+        msg.addEventListener('input', () => {
+          node.data.message = msg.value;
+          setDirty(true);
+        });
+      }
+    }
+
+    if(node.type === 'llm'){
+      const model = document.getElementById('f_model');
+      const temp = document.getElementById('f_temp');
+      const prompt = document.getElementById('f_prompt');
+      if(model){
+        model.addEventListener('change', () => {
+          node.data.model = model.value;
+          setDirty(true);
+        });
+      }
+      if(temp){
+        temp.addEventListener('input', () => {
+          node.data.temperature = parseFloat(temp.value || '0.7');
+          setDirty(true);
+        });
+      }
+      if(prompt){
+        prompt.addEventListener('input', () => {
+          node.data.prompt = prompt.value;
+          setDirty(true);
+        });
+      }
+    }
+
+    const note = document.getElementById('f_note');
+    if(note){
+      note.addEventListener('input', () => {
+        node.data.note = note.value;
+        setDirty(true);
+      });
+    }
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/'/g,'&#39;'); }
+
+  // ----------------------------
+  // Initial demo graph (like your screenshot)
+  // ----------------------------
+  function init(){
+    // place nodes in world coords
+    const startId = addNode('start', 180, 220);
+    const waitId  = addNode('wait', 460, 200);
+    const llmId   = addNode('llm', 760, 200);
+    const endId   = addNode('end', 1060, 220);
+
+    // connect them
+    addEdge(startId,'input', waitId,'in');
+    addEdge(waitId,'out', llmId,'input');
+    addEdge(llmId,'output', endId,'output');
+
+    setDirty(false);
+    selectNode(llmId);
+
+    // center view roughly
+    state.scale = 1;
+    state.panX = 0;
+    state.panY = 0;
+    applyTransform();
+
+    log('Demo 已初始化：开始 → time_wait → 大模型 → 结束');
+  }
+
+  // ----------------------------
+  // Drag & Drop from palette
+  // ----------------------------
+  document.querySelectorAll('.node-item[draggable="true"]').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', item.dataset.type);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+
+  canvasWrap.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  canvasWrap.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('text/plain');
+    if(!type) return;
+    const w = screenToWorld(e.clientX, e.clientY);
+    addNode(type, w.x - 110, w.y - 40);
+    showToast(`已添加节点：${type}`);
+  });
+
+  // ----------------------------
+  // Canvas interactions: pan/zoom, node drag, connect preview
+  // ----------------------------
+  canvasWrap.addEventListener('mousedown', (ev) => {
+    // left click on empty = start panning
+    if(ev.button !== 0) return;
+    // if clicking empty background -> pan
+    if(ev.target === canvasWrap || ev.target === world || ev.target === nodesLayer || ev.target === edgesSvg){
+      state.panning = true;
+      state.panStart.x = ev.clientX;
+      state.panStart.y = ev.clientY;
+      state.panStart.panX = state.panX;
+      state.panStart.panY = state.panY;
+      selectNode(null);
+    }
+  });
+
+  window.addEventListener('mousemove', (ev) => {
+    // node dragging
+    if(state.draggingNodeId){
+      const node = state.nodes.get(state.draggingNodeId);
+      if(node){
+        const w = screenToWorld(ev.clientX, ev.clientY);
+        node.x = w.x - state.dragOffset.x;
+        node.y = w.y - state.dragOffset.y;
+        renderNode(node);
+        renderEdges();
+        setDirty(true);
+      }
+      return;
+    }
+
+    // panning
+    if(state.panning){
+      const dx = ev.clientX - state.panStart.x;
+      const dy = ev.clientY - state.panStart.y;
+      state.panX = state.panStart.panX + dx;
+      state.panY = state.panStart.panY + dy;
+      applyTransform();
+      return;
+    }
+
+    // connecting preview
+    if(state.connecting){
+      renderPreviewPath(ev.clientX, ev.clientY);
+    }
+  });
+
+  window.addEventListener('mouseup', (ev) => {
+    // stop node drag
+    if(state.draggingNodeId){
+      state.draggingNodeId = null;
+      return;
+    }
+    // stop panning
+    if(state.panning){
+      state.panning = false;
+      return;
+    }
+    // cancel connect if released elsewhere
+    if(state.connecting){
+      cancelConnect();
+    }
+  });
+
+  // wheel zoom
+  canvasWrap.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const delta = -ev.deltaY;
+    const factor = delta > 0 ? 1.08 : 1/1.08;
+
+    // zoom around mouse position
+    const before = screenToWorld(ev.clientX, ev.clientY);
+    const newScale = clamp(state.scale * factor, 0.35, 2.5);
+
+    // adjust pan to keep cursor point stable
+    const rect = canvasWrap.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    // world point under cursor before: before.x/before.y
+    // after scaling, we want:
+    // panX' + before.x * newScale = sx  => panX' = sx - before.x * newScale
+    state.scale = newScale;
+    state.panX = sx - before.x * newScale;
+    state.panY = sy - before.y * newScale;
+
+    applyTransform();
+  }, { passive:false });
+
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  // ----------------------------
+  // Buttons: zoom/fit/publish/run/add
+  // ----------------------------
+  btnZoomIn.addEventListener('click', () => {
+    state.scale = clamp(state.scale * 1.12, 0.35, 2.5);
+    applyTransform();
+  });
+  btnZoomOut.addEventListener('click', () => {
+    state.scale = clamp(state.scale / 1.12, 0.35, 2.5);
+    applyTransform();
+  });
+
+  btnFit.addEventListener('click', () => {
+    // simple fit: reset pan/zoom
+    state.scale = 1;
+    state.panX = 0;
+    state.panY = 0;
+    applyTransform();
+    showToast('已适配视图（Demo：重置）');
+  });
+
+  btnPublish.addEventListener('click', () => {
+    setDirty(false);
+    showToast('发布成功（Demo）');
+    log('发布：通过（Demo，不做真实发布）');
+  });
+
+  btnAddNode.addEventListener('click', () => {
+    const w = screenToWorld(canvasWrap.getBoundingClientRect().left + canvasWrap.clientWidth/2, canvasWrap.getBoundingClientRect().top + canvasWrap.clientHeight/2);
+    addNode('llm', w.x - 110, w.y - 40);
+    showToast('已添加一个“大模型”节点');
+  });
+
+  btnRun.addEventListener('click', async () => {
+    if(state.running) return;
+    state.running = true;
+
+    // reset statuses
+    for(const n of state.nodes.values()){
+      n.status = 'idle';
+      renderNode(n);
+    }
+    renderEdges();
+
+    log('试运行：开始');
+
+    // naive execution order: follow edges from start by chaining (single path demo)
+    const start = [...state.nodes.values()].find(n => n.type === 'start');
+    if(!start){
+      showToast('缺少开始节点');
+      state.running = false;
+      return;
+    }
+
+    // build adjacency from node outputs to node inputs (edge list)
+    const nextOf = (nodeId) => {
+      // pick first outgoing edge for demo
+      for(const e of state.edges.values()){
+        if(e.from.nodeId === nodeId) return e.to.nodeId;
+      }
+      return null;
+    };
+
+    let current = start.id;
+    const visited = new Set();
+    while(current){
+      if(visited.has(current)){
+        showToast('检测到循环（Demo）');
+        log('试运行：检测到循环，停止');
+        break;
+      }
+      visited.add(current);
+
+      const node = state.nodes.get(current);
+      if(!node) break;
+
+      node.status = 'running';
+      renderNode(node);
+      selectNode(node.id);
+      log(`执行节点：${node.title} (${node.type})`);
+
+      // simulate work
+      let delayMs = 420;
+      if(node.type === 'wait'){
+        delayMs = Math.max(0, (node.data.seconds ?? 1) * 450);
+      } else if(node.type === 'llm'){
+        delayMs = 900;
+      }
+
+      await sleep(delayMs);
+
+      // success
+      node.status = 'success';
+      renderNode(node);
+
+      // move to next
+      current = nextOf(node.id);
+    }
+
+    log('试运行：结束');
+    state.running = false;
+  });
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  // ----------------------------
+  // Keyboard: delete selected
+  // ----------------------------
+  window.addEventListener('keydown', (ev) => {
+    if(ev.key === 'Delete' || ev.key === 'Backspace'){
+      // don't delete while typing in inputs
+      const tag = document.activeElement && document.activeElement.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if(state.selectedNodeId){
+        const id = state.selectedNodeId;
+        removeNode(id);
+        showToast('已删除节点');
+        log(`删除节点：${id}`);
+      }
+    }
+    if(ev.key === 'Escape'){
+      cancelConnect();
+    }
+  });
+
+  // ----------------------------
+  // Click on empty to clear selection / cancel connect
+  // ----------------------------
+  canvasWrap.addEventListener('click', (ev) => {
+    if(ev.target === canvasWrap || ev.target === world || ev.target === nodesLayer || ev.target === edgesSvg){
+      selectNode(null);
+      cancelConnect();
+    }
+  });
+
+  // ----------------------------
+  // Boot
+  // ----------------------------
+  init();
+  renderAll();
+
+})();
+</script>
+</body>
+</html>

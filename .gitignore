@@ -1,0 +1,6 @@
+﻿node_modules
+*.log
+.env
+apps/api/data/*.db
+dist
+coverage
