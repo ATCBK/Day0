@@ -75,6 +75,7 @@ export const useRunStore = defineStore("runStore", {
     connectSSE(runId: string) {
       this.closeStream();
 
+      console.info("[runStore] connectSSE", { runId, fromSeq: this.lastSeq });
       eventSource = createRunEventSource(runId);
       eventSource.addEventListener("run_event", (evt) => {
         const message = evt as MessageEvent<string>;
@@ -84,11 +85,20 @@ export const useRunStore = defineStore("runStore", {
       eventSource.onerror = async () => {
         if (this.status !== "RUNNING") return;
 
+        console.warn("[runStore] SSE disconnected, start replay", {
+          runId,
+          afterSeq: this.lastSeq
+        });
         this.closeStream();
 
         try {
           await this.fetchEvents(runId, this.lastSeq);
+          console.info("[runStore] replay finished, reconnecting", {
+            runId,
+            afterSeq: this.lastSeq
+          });
         } catch {
+          console.error("[runStore] replay failed", { runId, afterSeq: this.lastSeq });
           ElMessage.warning("SSE 补偿拉取失败，正在重试");
         }
 
