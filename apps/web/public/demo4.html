@@ -1,0 +1,1929 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Coze-like Demo (Single HTML, White Theme)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --bg2:#f6f7fb;
+      --panel:#ffffff;
+      --panel2:#fbfcff;
+      --line:#e7e9f1;
+      --line2:#dfe3ee;
+      --text:#0f172a;
+      --muted:#64748b;
+      --muted2:#94a3b8;
+      --accent:#5b5cf6;
+      --accent2:#4f46e5;
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --err:#ef4444;
+      --shadow: 0 14px 34px rgba(15,23,42,.10);
+      --shadow2: 0 6px 18px rgba(15,23,42,.08);
+      --radius: 14px;
+      --radius2: 12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
+    button, input, select, textarea{ font:inherit; }
+    a{ color:inherit; text-decoration:none; }
+
+    /* App shell */
+    .app{ height:100%; display:flex; flex-direction:column; }
+
+    /* Top bar (match screenshot vibe) */
+    .topbar{
+      height:56px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #fff, #fafbff);
+      position:sticky; top:0; z-index:50;
+    }
+    .top-left{
+      display:flex; align-items:center; gap:12px;
+      min-width: 380px;
+    }
+    .logo{
+      width:28px;height:28px;border-radius:10px;
+      background:linear-gradient(135deg, rgba(91,92,246,.18), rgba(79,70,229,.10));
+      border:1px solid rgba(91,92,246,.35);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--accent2);
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .brand{
+      display:flex; flex-direction:column; line-height:1.1;
+      min-width: 220px;
+    }
+    .brand .t{ font-weight:800; letter-spacing:.2px; }
+    .brand .s{ font-size:12px; color:var(--muted); font-weight:600; }
+
+    .pill{
+      font-size:12px;
+      color:var(--muted);
+      padding:4px 10px;
+      border:1px solid var(--line2);
+      border-radius:999px;
+      background:#fff;
+      white-space:nowrap;
+    }
+
+    .top-mid{
+      display:flex; align-items:center; gap:8px;
+    }
+    .tab{
+      padding:7px 10px;
+      border-radius:12px;
+      border:1px solid transparent;
+      color: var(--muted);
+      cursor:pointer;
+      user-select:none;
+      font-weight:650;
+    }
+    .tab:hover{ background:#f6f7ff; color: var(--text); }
+    .tab.active{
+      background:rgba(91,92,246,.10);
+      border-color: rgba(91,92,246,.30);
+      color: var(--accent2);
+    }
+
+    .top-actions{
+      display:flex; align-items:center; gap:10px;
+      min-width: 320px;
+      justify-content:flex-end;
+    }
+    .btn{
+      padding:8px 12px;
+      border-radius:12px;
+      border:1px solid var(--line2);
+      background:#fff;
+      color:var(--text);
+      cursor:pointer;
+      user-select:none;
+      transition:.15s ease;
+      box-shadow: 0 0 0 rgba(0,0,0,0);
+    }
+    .btn:hover{ background:#f8f9ff; }
+    .btn.primary{
+      background:rgba(91,92,246,.10);
+      border-color: rgba(91,92,246,.35);
+      color: var(--accent2);
+    }
+    .btn.primary:hover{ background:rgba(91,92,246,.14); }
+    .btn.green{
+      background:rgba(22,163,74,.10);
+      border-color: rgba(22,163,74,.30);
+      color: #166534;
+    }
+    .btn.green:hover{ background:rgba(22,163,74,.14); }
+    .btn.ghost{
+      background:transparent;
+      border-color:transparent;
+    }
+    .btn.ghost:hover{
+      background:#f4f6ff;
+      border-color:var(--line);
+    }
+
+    /* Pages container */
+    .pages{ flex:1; min-height:0; position:relative; }
+    .page{ position:absolute; inset:0; display:none; }
+    .page.active{ display:flex; }
+
+    /* ========= Agent Page Layout (match screenshot: left config, mid editor, right debug) ========= */
+    .agent{
+      flex:1; min-height:0;
+      display:flex;
+      background: var(--bg);
+    }
+    .agent-left{
+      width:320px;
+      border-right:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      overflow:auto;
+    }
+    .agent-mid{
+      flex:1; min-width:0;
+      padding:12px;
+      overflow:auto;
+      background: var(--bg);
+    }
+    .agent-right{
+      width:420px;
+      border-left:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+
+    .section-title{
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .kbd{
+      font-size:11px; color:var(--muted);
+      border:1px solid var(--line2);
+      padding:2px 7px;
+      border-radius:10px;
+      background:#fff;
+      white-space:nowrap;
+    }
+    .card{
+      border:1px solid var(--line2);
+      border-radius: var(--radius);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      padding:12px;
+    }
+    .card + .card{ margin-top:12px; }
+    .card h3{
+      margin:0 0 10px 0;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    /* Left collapsible config list */
+    .acc{
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .acc-item{
+      border:1px solid var(--line2);
+      border-radius: var(--radius);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .acc-head{
+      padding:12px 12px;
+      display:flex; align-items:center; justify-content:space-between;
+      cursor:pointer;
+      user-select:none;
+    }
+    .acc-head .left{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .acc-head .t{ font-weight:800; font-size:13px; }
+    .acc-head .s{ font-size:12px; color:var(--muted); }
+    .acc-head .chev{ color:var(--muted); font-size:12px; }
+    .acc-body{
+      border-top:1px solid var(--line);
+      padding:12px;
+      display:none;
+      background: linear-gradient(180deg, #fff, #fcfcff);
+    }
+    .acc-item.open .acc-body{ display:block; }
+    .acc-row{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:center;
+    }
+    .chip{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:#fff;
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    /* Mid editor fields */
+    .field{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+    .field label{ font-size:12px; color:var(--muted); }
+    .field input, .field select, .field textarea{
+      width:100%;
+      border-radius:14px;
+      border:1px solid var(--line2);
+      background:#fff;
+      color:var(--text);
+      padding:10px 12px;
+      outline:none;
+    }
+    .field textarea{ min-height:110px; resize:vertical; }
+    .help{
+      font-size:12px; color:var(--muted); line-height:1.5;
+      margin-top:8px;
+    }
+
+    /* Right chat debug */
+    .chat{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      border:1px solid var(--line2);
+      border-radius: var(--radius);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      min-height:0;
+    }
+    .chat-head{
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      background: linear-gradient(180deg, #fff, #fbfbff);
+    }
+    .chat-title{ font-weight:850; font-size:13px; }
+    .chat-body{
+      flex:1; min-height:0;
+      padding:12px;
+      overflow:auto;
+      background:#fff;
+    }
+    .msg{
+      max-width: 88%;
+      padding:10px 12px;
+      border-radius: 16px;
+      border:1px solid var(--line2);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      margin-bottom:10px;
+      font-size:13px;
+      line-height:1.55;
+      color: rgba(15,23,42,.92);
+      white-space:pre-wrap;
+    }
+    .msg.user{
+      margin-left:auto;
+      border-color: rgba(91,92,246,.25);
+      background: rgba(91,92,246,.06);
+    }
+    .msg.assistant{ margin-right:auto; }
+    .chat-input{
+      display:flex; gap:10px;
+      padding:10px;
+      border-top:1px solid var(--line);
+      background:#fff;
+    }
+    .chat-input input{
+      flex:1;
+      border-radius: 14px;
+      border:1px solid var(--line2);
+      padding:10px 12px;
+      outline:none;
+      background:#fff;
+    }
+
+    /* ========= Workflow Page (nodes deletable) ========= */
+    .wf{
+      flex:1; min-height:0;
+      display:flex;
+      background: var(--bg);
+    }
+    .wf-left{
+      width:260px;
+      border-right:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      overflow:auto;
+    }
+    .wf-center{
+      flex:1; min-width:0;
+      position:relative; overflow:hidden;
+      background: var(--bg);
+    }
+    .wf-right{
+      width:340px;
+      border-left:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      overflow:auto;
+    }
+
+    .node-list{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+    .node-item{
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid var(--line2);
+      background:#fff;
+      cursor:grab;
+      user-select:none;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      box-shadow: var(--shadow2);
+    }
+    .node-item:active{ cursor:grabbing; }
+    .node-item .meta{ display:flex; flex-direction:column; gap:2px; }
+    .node-item .name{ font-weight:800; font-size:13px; }
+    .node-item .desc{ font-size:12px; color:var(--muted); }
+
+    .canvas-wrap{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(circle at 1px 1px, rgba(15,23,42,.10) 1px, transparent 1px) 0 0 / 22px 22px,
+        linear-gradient(180deg, rgba(91,92,246,.06), rgba(255,255,255,0));
+    }
+    .world{
+      position:absolute; left:0; top:0;
+      width:100%; height:100%;
+      transform-origin:0 0;
+      will-change:transform;
+    }
+    svg.edges{ position:absolute; inset:0; overflow:visible; pointer-events:none; }
+    .nodes-layer{ position:absolute; inset:0; }
+
+    .toast{
+      position:absolute; left:50%; top:12px; transform:translateX(-50%);
+      padding:8px 12px; border-radius:12px;
+      background:#fff;
+      border:1px solid var(--line2);
+      box-shadow: var(--shadow2);
+      color: rgba(15,23,42,.85);
+      font-size:12px;
+      opacity:0; pointer-events:none;
+      transition:opacity .2s ease;
+      z-index:50;
+    }
+    .toast.show{ opacity:1; }
+
+    .node{
+      position:absolute;
+      width:230px;
+      border-radius: 16px;
+      border:1px solid var(--line2);
+      background:#fff;
+      box-shadow: var(--shadow);
+      user-select:none;
+    }
+    .node.selected{ outline:2px solid rgba(91,92,246,.55); outline-offset:2px; }
+    .node-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 10px 6px 10px;
+      gap:10px;
+    }
+    .node-title{
+      display:flex; align-items:center; gap:8px;
+      font-weight:850; font-size:13px;
+      min-width: 0;
+    }
+    .badge{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      color: var(--muted);
+      background:#fff;
+      flex:0 0 auto;
+    }
+    .title-text{
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .node-actions{
+      display:flex; align-items:center; gap:6px;
+      flex:0 0 auto;
+    }
+    .iconbtn{
+      width:28px; height:28px;
+      border-radius:10px;
+      border:1px solid var(--line2);
+      background:#fff;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      color: var(--muted);
+    }
+    .iconbtn:hover{ background:#f6f7ff; color: var(--text); }
+    .iconbtn.danger:hover{ background: rgba(239,68,68,.08); color:#991b1b; border-color: rgba(239,68,68,.25); }
+
+    .run-badge{
+      font-size:11px; padding:2px 8px; border-radius:999px;
+      border:1px solid var(--line2);
+      background:#fff;
+      color: var(--muted);
+    }
+    .run-badge.running{ border-color: rgba(91,92,246,.35); color: var(--accent2); background: rgba(91,92,246,.08); }
+    .run-badge.success{ border-color: rgba(22,163,74,.30); color:#166534; background: rgba(22,163,74,.08); }
+    .run-badge.error{ border-color: rgba(239,68,68,.30); color:#991b1b; background: rgba(239,68,68,.08); }
+
+    .node-body{ padding: 0 10px 10px 10px; display:flex; gap:10px; }
+    .io-col{ flex:1; display:flex; flex-direction:column; gap:6px; }
+    .io-label{
+      font-size:12px; color:var(--muted);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .io-pill{
+      font-size:11px;
+      color: rgba(15,23,42,.85);
+      padding:7px 8px;
+      border-radius:12px;
+      border:1px solid var(--line2);
+      background:#fff;
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+    }
+    .port{
+      width:10px; height:10px; border-radius:999px;
+      border:1px solid rgba(91,92,246,.45);
+      background: rgba(91,92,246,.20);
+      flex:0 0 auto;
+    }
+    .port.in{
+      border-color: rgba(22,163,74,.35);
+      background: rgba(22,163,74,.18);
+    }
+    .port.out{
+      border-color: rgba(91,92,246,.45);
+      background: rgba(91,92,246,.20);
+    }
+    .port.hit{ outline:3px solid rgba(15,23,42,.10); outline-offset:2px; }
+
+    .edge-path{
+      stroke: rgba(91,92,246,.85);
+      stroke-width: 2.2;
+      fill:none;
+      filter: drop-shadow(0 6px 10px rgba(15,23,42,.10));
+    }
+    .edge-path.ok{ stroke: rgba(22,163,74,.65); }
+    .edge-path.preview{ stroke-dasharray: 6 6; stroke: rgba(15,23,42,.35); }
+
+    .bottom{
+      position:absolute; left:14px; right:14px; bottom:12px;
+      display:flex; align-items:center; justify-content:space-between;
+      pointer-events:none;
+      z-index:20;
+    }
+    .toolbar{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
+    .zoom{
+      display:flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line2);
+      border-radius:14px;
+      background:#fff;
+      box-shadow: var(--shadow2);
+    }
+    .zoom .pct{ width:52px; text-align:center; color:rgba(15,23,42,.82); font-size:12px; }
+    .hint{
+      font-size:12px; color:var(--muted);
+      padding:8px 10px;
+      border:1px solid var(--line2);
+      border-radius:14px;
+      background:#fff;
+      box-shadow: var(--shadow2);
+      max-width: 70ch;
+    }
+    .log{
+      font-family:var(--mono);
+      font-size:12px;
+      color: rgba(15,23,42,.75);
+      white-space: pre-wrap;
+      line-height:1.45;
+      max-height: 260px;
+      overflow:auto;
+      border:1px solid var(--line2);
+      border-radius:14px;
+      padding:10px;
+      background:#fff;
+    }
+
+    /* ========= Knowledge Base (RAG) Page (simple upload) ========= */
+    .kb{
+      flex:1; min-height:0;
+      display:flex;
+      background: var(--bg);
+    }
+    .kb-left{
+      width:320px;
+      border-right:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      overflow:auto;
+    }
+    .kb-mid{
+      flex:1; min-width:0;
+      padding:12px;
+      overflow:auto;
+      background: var(--bg);
+    }
+    .kb-right{
+      width:420px;
+      border-left:1px solid var(--line);
+      background: var(--panel2);
+      padding:12px;
+      overflow:auto;
+    }
+
+    .drop{
+      border:1.5px dashed rgba(91,92,246,.35);
+      border-radius: var(--radius);
+      background: rgba(91,92,246,.04);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .drop strong{ color: var(--accent2); }
+    .filelist{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .fileitem{
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid var(--line2);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .filemeta{
+      display:flex; flex-direction:column; gap:2px;
+      min-width:0;
+    }
+    .filemeta .n{ font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .filemeta .d{ font-size:12px; color:var(--muted); }
+    .small{
+      font-size:12px; color:var(--muted); line-height:1.5;
+    }
+    .row{
+      display:flex; gap:10px; flex-wrap:wrap;
+      align-items:center;
+    }
+    .sep{ height:1px; background:var(--line); margin:12px 0; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="top-left">
+      <div class="logo">C</div>
+      <div class="brand">
+        <div class="t">Coze-like 前端 Demo（单文件）</div>
+        <div class="s">工作流 / Agent 编辑 / 知识库（白色主题）</div>
+      </div>
+      <span class="pill" id="globalStatus">草稿已保存</span>
+    </div>
+
+    <div class="top-mid" id="tabs">
+      <div class="tab active" data-page="agent">Agent 编辑</div>
+      <div class="tab" data-page="workflow">工作流设计</div>
+      <div class="tab" data-page="kb">知识库（RAG）</div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn ghost" id="btnReset">重置 Demo</button>
+      <button class="btn primary" id="btnPublish">发布（Demo）</button>
+      <button class="btn green" id="btnRun">试运行</button>
+    </div>
+  </div>
+
+  <div class="pages">
+    <!-- ===================== Agent Page ===================== -->
+    <div class="page active" id="page-agent">
+      <div class="agent">
+        <!-- Left: Custom configuration -->
+        <div class="agent-left">
+          <div class="section-title">
+            <span>人设与回复逻辑</span>
+            <span class="kbd">测试</span>
+          </div>
+
+          <div class="acc" id="acc">
+            <div class="acc-item open" data-key="model">
+              <div class="acc-head">
+                <div class="left">
+                  <div class="t">模型设置</div>
+                  <div class="s">模型、温度、上下文等</div>
+                </div>
+                <div class="chev">▾</div>
+              </div>
+              <div class="acc-body">
+                <div class="field" style="margin-top:0">
+                  <label>模型</label>
+                  <select id="agentModel">
+                    <option value="gpt-4.1-mini" selected>gpt-4.1-mini</option>
+                    <option value="gpt-4.1">gpt-4.1</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="gpt-4o">gpt-4o</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>温度（Demo）</label>
+                  <input id="agentTemp" type="number" min="0" max="2" step="0.1" value="0.7" />
+                </div>
+                <div class="small" style="margin-top:8px">
+                  Demo 不做真实推理，仅展示配置入口。
+                </div>
+              </div>
+            </div>
+
+            <div class="acc-item" data-key="skills">
+              <div class="acc-head">
+                <div class="left">
+                  <div class="t">技能</div>
+                  <div class="s">插件 / 工作流 / 工具调用</div>
+                </div>
+                <div class="chev">▸</div>
+              </div>
+              <div class="acc-body">
+                <div class="small">这里只做“接入工作流”的选择与开关演示。</div>
+                <div class="field">
+                  <label>启用工作流</label>
+                  <select id="useWorkflow">
+                    <option value="on" selected>开启</option>
+                    <option value="off">关闭</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>选择工作流</label>
+                  <select id="workflowSelect">
+                    <option value="workflow_demo" selected>workflow_demo</option>
+                    <option value="order_assistant">order_assistant</option>
+                    <option value="faq_router">faq_router</option>
+                  </select>
+                </div>
+                <div class="row" style="margin-top:10px">
+                  <button class="btn" id="btnOpenWorkflowFromAgent">打开工作流设计</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="acc-item" data-key="knowledge">
+              <div class="acc-head">
+                <div class="left">
+                  <div class="t">知识</div>
+                  <div class="s">接入知识库（RAG）</div>
+                </div>
+                <div class="chev">▸</div>
+              </div>
+              <div class="acc-body">
+                <div class="small">这里只做“选择知识库 + 是否启用检索”的演示。</div>
+                <div class="field">
+                  <label>启用知识库检索</label>
+                  <select id="useKb">
+                    <option value="on" selected>开启</option>
+                    <option value="off">关闭</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>选择知识库</label>
+                  <select id="kbSelect">
+                    <option value="kb_demo" selected>kb_demo</option>
+                    <option value="product_docs">product_docs</option>
+                    <option value="policy_docs">policy_docs</option>
+                  </select>
+                </div>
+                <div class="row" style="margin-top:10px">
+                  <button class="btn" id="btnOpenKbFromAgent">创建/管理知识库</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="acc-item" data-key="memory">
+              <div class="acc-head">
+                <div class="left">
+                  <div class="t">记忆</div>
+                  <div class="s">变量 / 长期记忆（Demo）</div>
+                </div>
+                <div class="chev">▸</div>
+              </div>
+              <div class="acc-body">
+                <div class="row">
+                  <span class="chip">sys_images</span>
+                  <span class="chip">input_text</span>
+                  <span class="chip">llm_output</span>
+                </div>
+                <div class="small" style="margin-top:8px">
+                  Demo 不做持久化，仅展示 UI。
+                </div>
+              </div>
+            </div>
+
+            <div class="acc-item" data-key="experience">
+              <div class="acc-head">
+                <div class="left">
+                  <div class="t">对话体验</div>
+                  <div class="s">开场白 / 快捷指令（Demo）</div>
+                </div>
+                <div class="chev">▸</div>
+              </div>
+              <div class="acc-body">
+                <div class="field" style="margin-top:0">
+                  <label>开场白</label>
+                  <input id="agentHello" value="你好，我可以帮你连接工作流与知识库，并在右侧调试对话。" />
+                </div>
+                <div class="field">
+                  <label>快捷指令（Demo）</label>
+                  <div class="row">
+                    <span class="chip">/help</span>
+                    <span class="chip">/run_workflow</span>
+                    <span class="chip">/rag</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>常用模板（Demo）</h3>
+            <div class="row">
+              <span class="chip">通用结构</span>
+              <span class="chip">任务执行</span>
+              <span class="chip">角色扮演</span>
+            </div>
+            <div class="small" style="margin-top:10px">
+              仅用于展示布局，不含真实模板库。
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle: Editor (only workflow + KB chips needed) -->
+        <div class="agent-mid">
+          <div class="card">
+            <h3>编辑</h3>
+
+            <div class="field" style="margin-top:0">
+              <label>System Prompt（人设/规则）</label>
+              <textarea id="agentSystem">你是一个严谨的助理。回答要结构清晰、可执行。</textarea>
+            </div>
+
+            <div class="field">
+              <label>接入能力（Demo）</label>
+              <div class="row">
+                <span class="chip">工作流：<b id="chipWorkflow">workflow_demo</b></span>
+                <span class="chip">知识库：<b id="chipKb">kb_demo</b></span>
+                <span class="chip">检索：<b id="chipKbOn">ON</b></span>
+              </div>
+              <div class="help">
+                这块只保留你要的核心：中间支持接入“工作流 + 知识库”。（不展示分段/召回细节）
+              </div>
+            </div>
+
+            <div class="field">
+              <label>工具行为（Demo）</label>
+              <textarea id="agentToolPolicy" placeholder="例如：什么时候调用工作流，什么时候走RAG...">当用户请求结构化任务时优先调用工作流；当用户询问资料时优先使用知识库检索。</textarea>
+            </div>
+
+            <div class="row" style="margin-top:14px">
+              <button class="btn primary" id="btnSaveAgent">保存（Demo）</button>
+              <button class="btn" id="btnSendHello">发送开场白到右侧</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>说明</h3>
+            <div class="small">
+              你上传的布局里：左侧是可展开配置，中间是编辑区，右侧是预览与调试。这里按该结构复刻。
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Debug Chat -->
+        <div class="agent-right">
+          <div class="chat">
+            <div class="chat-head">
+              <div class="chat-title">预览与调试</div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn" id="btnClearChat">清空</button>
+                <button class="btn green" id="btnQuickRun">试运行</button>
+              </div>
+            </div>
+            <div class="chat-body" id="chatBody"></div>
+            <div class="chat-input">
+              <input id="chatInput" placeholder="发送消息..." />
+              <button class="btn primary" id="btnSend">发送</button>
+            </div>
+          </div>
+          <div class="small" style="margin-top:10px">
+            Demo 回复为本地模拟：会根据“是否启用工作流/知识库”拼接提示，不做真实推理。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Workflow Page ===================== -->
+    <div class="page" id="page-workflow">
+      <div class="wf">
+        <div class="wf-left">
+          <div class="section-title">
+            <span>节点库（拖到画布）</span>
+            <span class="kbd">拖拽</span>
+          </div>
+          <div class="node-list" id="wfPalette">
+            <div class="node-item" draggable="true" data-type="start">
+              <div class="meta">
+                <div class="name">开始</div>
+                <div class="desc">流程入口</div>
+              </div>
+              <div class="kbd">Start</div>
+            </div>
+            <div class="node-item" draggable="true" data-type="wait">
+              <div class="meta">
+                <div class="name">time_wait</div>
+                <div class="desc">延时等待</div>
+              </div>
+              <div class="kbd">Wait</div>
+            </div>
+            <div class="node-item" draggable="true" data-type="llm">
+              <div class="meta">
+                <div class="name">大模型</div>
+                <div class="desc">LLM 调用</div>
+              </div>
+              <div class="kbd">LLM</div>
+            </div>
+            <div class="node-item" draggable="true" data-type="end">
+              <div class="meta">
+                <div class="name">结束</div>
+                <div class="desc">流程出口</div>
+              </div>
+              <div class="kbd">End</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:12px">
+            <h3>操作</h3>
+            <div class="small">
+              <div><span class="kbd">滚轮</span> 缩放　<span class="kbd">空白拖拽</span> 平移</div>
+              <div style="margin-top:6px"><span class="kbd">拖端口</span> 输出→输入 连线</div>
+              <div style="margin-top:6px"><span class="kbd">Delete</span> 删除选中节点 或 点击节点右上角 🗑</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wf-center" id="wfCenter">
+          <div class="canvas-wrap" id="wfCanvasWrap">
+            <div class="toast" id="wfToast"></div>
+
+            <div class="world" id="wfWorld">
+              <svg class="edges" id="wfEdgesSvg">
+                <path id="wfPreviewPath" class="edge-path preview" d=""></path>
+              </svg>
+              <div class="nodes-layer" id="wfNodesLayer"></div>
+            </div>
+
+            <div class="bottom">
+              <div class="toolbar">
+                <div class="zoom">
+                  <button class="btn" id="wfZoomOut">－</button>
+                  <div class="pct" id="wfZoomPct">100%</div>
+                  <button class="btn" id="wfZoomIn">＋</button>
+                </div>
+                <button class="btn" id="wfFit">适配视图</button>
+              </div>
+              <div class="toolbar">
+                <button class="btn" id="wfAddNode">+ 添加节点</button>
+                <div class="hint">Demo：节点可删除（右上角 🗑 / Delete）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wf-right">
+          <div class="card">
+            <h3>节点配置 <span class="kbd" id="wfSelId">未选中</span></h3>
+            <div id="wfInspectorBody" class="small">点击画布节点查看/编辑参数。</div>
+          </div>
+
+          <div class="card">
+            <h3>运行日志（Demo）</h3>
+            <div class="log" id="wfRunLog"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== KB Page (RAG) ===================== -->
+    <div class="page" id="page-kb">
+      <div class="kb">
+        <div class="kb-left">
+          <div class="card">
+            <h3>知识库列表（Demo）</h3>
+            <div class="small">不展示分段/召回细节；仅提供创建、上传、挂载。</div>
+          </div>
+
+          <div class="card">
+            <h3>现有知识库</h3>
+            <div class="row">
+              <span class="chip">kb_demo</span>
+              <span class="chip">product_docs</span>
+              <span class="chip">policy_docs</span>
+            </div>
+            <div class="small" style="margin-top:10px">
+              Agent 页可选择挂载这些知识库（Demo）。
+            </div>
+          </div>
+        </div>
+
+        <div class="kb-mid">
+          <div class="card">
+            <h3>创建知识库（RAG Demo）</h3>
+
+            <div class="field" style="margin-top:0">
+              <label>知识库名称</label>
+              <input id="kbName" value="kb_demo" />
+            </div>
+
+            <div class="field">
+              <label>描述</label>
+              <input id="kbDesc" value="用于演示的知识库（前端本地）" />
+            </div>
+
+            <div class="sep"></div>
+
+            <div class="drop" id="dropZone">
+              <div><strong>上传资料</strong>（拖拽文件到此处，或点击选择）</div>
+              <div class="small">支持 txt / md / pdf / docx / xlsx / 图片等（Demo 不做解析，仅展示文件列表）。</div>
+              <div class="row">
+                <input type="file" id="kbFiles" multiple style="display:none" />
+                <button class="btn primary" id="btnPickFiles">选择文件</button>
+                <button class="btn" id="btnClearFiles">清空文件</button>
+              </div>
+              <div class="filelist" id="fileList"></div>
+            </div>
+
+            <div class="row" style="margin-top:14px">
+              <button class="btn primary" id="btnCreateKb">创建/保存知识库（Demo）</button>
+              <button class="btn" id="btnBackToAgent">返回 Agent 编辑</button>
+            </div>
+
+            <div class="help">
+              说明：这里不做分段展示、不做向量化/索引，只把上传文件列出来，模拟“资料已加入知识库”。
+            </div>
+          </div>
+        </div>
+
+        <div class="kb-right">
+          <div class="card">
+            <h3>挂载到 Agent（Demo）</h3>
+            <div class="small">
+              创建/保存后，你可以回到 Agent 页，在“知识”里选择该知识库并开启检索。
+            </div>
+            <div class="sep"></div>
+            <div class="small" id="kbSummary">当前：kb_demo（0 个文件）</div>
+          </div>
+
+          <div class="card">
+            <h3>模拟检索（Demo）</h3>
+            <div class="field" style="margin-top:0">
+              <label>输入问题</label>
+              <input id="kbQuery" placeholder="例如：这个产品的退款规则是什么？" />
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn green" id="btnKbSearch">检索（Demo）</button>
+            </div>
+            <div class="log" id="kbLog" style="margin-top:10px; max-height: 220px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // =========================
+  // Helpers
+  // =========================
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
+  const uid = (p='id') => p + Math.random().toString(16).slice(2,10);
+
+  // =========================
+  // Global status / tabs
+  // =========================
+  const globalStatus = $('#globalStatus');
+  let globalDirty = false;
+  function setDirty(d){
+    globalDirty = d;
+    globalStatus.textContent = d ? '未保存（Demo）' : '草稿已保存';
+    globalStatus.style.borderColor = d ? 'rgba(245,158,11,.35)' : 'var(--line2)';
+    globalStatus.style.color = d ? '#92400e' : 'var(--muted)';
+  }
+  setDirty(false);
+
+  const pages = {
+    agent: $('#page-agent'),
+    workflow: $('#page-workflow'),
+    kb: $('#page-kb'),
+  };
+  function setPage(key){
+    Object.keys(pages).forEach(k => pages[k].classList.toggle('active', k===key));
+    $$('#tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.page === key));
+  }
+
+  $('#tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab');
+    if(!t) return;
+    setPage(t.dataset.page);
+  });
+
+  $('#btnReset').addEventListener('click', () => location.reload());
+  $('#btnPublish').addEventListener('click', () => {
+    setDirty(false);
+    // small cross-page feedback
+    wfToast('发布成功（Demo）');
+    wfLog('发布：通过（Demo）');
+  });
+
+  // global run: run workflow (if workflow enabled in agent), else just simulate
+  $('#btnRun').addEventListener('click', () => {
+    const useWf = $('#useWorkflow').value === 'on';
+    if(useWf){
+      setPage('workflow');
+      runWorkflow();
+    }else{
+      addMsg(`（Demo）未启用工作流：当前只做对话模拟。`, 'assistant');
+    }
+  });
+
+  // =========================
+  // Agent page
+  // =========================
+  const acc = $('#acc');
+  acc.addEventListener('click', (e) => {
+    const head = e.target.closest('.acc-head');
+    if(!head) return;
+    const item = head.closest('.acc-item');
+    if(!item) return;
+
+    const open = item.classList.contains('open');
+    // toggle only clicked item
+    item.classList.toggle('open', !open);
+    item.querySelector('.chev').textContent = open ? '▸' : '▾';
+  });
+
+  // chips reflect selection
+  const chipWorkflow = $('#chipWorkflow');
+  const chipKb = $('#chipKb');
+  const chipKbOn = $('#chipKbOn');
+
+  function syncChips(){
+    chipWorkflow.textContent = $('#workflowSelect').value;
+    chipKb.textContent = $('#kbSelect').value;
+    chipKbOn.textContent = $('#useKb').value.toUpperCase();
+  }
+  $('#workflowSelect').addEventListener('change', () => { syncChips(); setDirty(true); });
+  $('#kbSelect').addEventListener('change', () => { syncChips(); setDirty(true); });
+  $('#useKb').addEventListener('change', () => { syncChips(); setDirty(true); });
+  $('#useWorkflow').addEventListener('change', () => { syncChips(); setDirty(true); });
+  $('#agentSystem').addEventListener('input', () => setDirty(true));
+  $('#agentToolPolicy').addEventListener('input', () => setDirty(true));
+  $('#agentHello').addEventListener('input', () => setDirty(true));
+  $('#agentModel').addEventListener('change', () => setDirty(true));
+  $('#agentTemp').addEventListener('input', () => setDirty(true));
+  syncChips();
+
+  // open workflow/kb from agent
+  $('#btnOpenWorkflowFromAgent').addEventListener('click', () => setPage('workflow'));
+  $('#btnOpenKbFromAgent').addEventListener('click', () => setPage('kb'));
+
+  // save agent
+  $('#btnSaveAgent').addEventListener('click', () => {
+    setDirty(false);
+    addMsg('（系统）已保存 Agent 配置（Demo）', 'assistant');
+  });
+
+  // Chat debug
+  const chatBody = $('#chatBody');
+  const chatInput = $('#chatInput');
+
+  function addMsg(text, who='assistant'){
+    const el = document.createElement('div');
+    el.className = 'msg ' + (who==='user' ? 'user' : 'assistant');
+    el.textContent = text;
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function agentReply(userText){
+    const model = $('#agentModel').value;
+    const temp = $('#agentTemp').value;
+    const useWf = $('#useWorkflow').value === 'on';
+    const wfName = $('#workflowSelect').value;
+
+    const useKb = $('#useKb').value === 'on';
+    const kbName = $('#kbSelect').value;
+
+    const sys = $('#agentSystem').value.trim();
+    const policy = $('#agentToolPolicy').value.trim();
+
+    // local deterministic demo reply
+    const head = `（Demo）模型：${model}  温度：${temp}`;
+    const sysHint = sys ? `系统规则摘要：${sys.slice(0, 60)}${sys.length>60?'…':''}` : '未设置系统规则';
+    const toolHint = policy ? `工具策略摘要：${policy.slice(0, 60)}${policy.length>60?'…':''}` : '未设置工具策略';
+
+    const wfLine = useWf ? `工作流：已启用（${wfName}）` : `工作流：未启用`;
+    const kbLine = useKb ? `知识库：已启用检索（${kbName}）` : `知识库：未启用`;
+
+    let extra = '';
+    // super simple routing: if message contains "流程/工作流/下单" -> mention workflow, else mention KB if "资料/文档/规则"
+    if(useWf && /流程|工作流|下单|订单|执行/.test(userText)) extra = `建议：切到“工作流设计”页点“试运行”，验证链路。`;
+    else if(useKb && /资料|文档|规则|政策|说明|手册|RAG|知识库/.test(userText)) extra = `建议：到“知识库（RAG）”页上传资料，然后在此开启检索。`;
+
+    return `${head}\n${sysHint}\n${toolHint}\n${wfLine}\n${kbLine}\n\n你说：${userText}\n${extra || '（Demo）这是本地模拟回复。'}`;
+  }
+
+  $('#btnSend').addEventListener('click', () => {
+    const t = chatInput.value.trim();
+    if(!t) return;
+    chatInput.value = '';
+    addMsg(t, 'user');
+    setTimeout(() => addMsg(agentReply(t), 'assistant'), 220);
+  });
+
+  chatInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') $('#btnSend').click();
+  });
+
+  $('#btnClearChat').addEventListener('click', () => { chatBody.innerHTML = ''; });
+
+  $('#btnSendHello').addEventListener('click', () => {
+    const hello = $('#agentHello').value.trim() || '你好！';
+    addMsg(hello, 'assistant');
+  });
+
+  $('#btnQuickRun').addEventListener('click', () => $('#btnRun').click());
+
+  // seed
+  addMsg('（Demo）在这里调试对话：发送消息后，会根据“是否启用工作流/知识库”给出模拟回复。', 'assistant');
+
+  // =========================
+  // Workflow page (nodes deletable + delete button)
+  // =========================
+  const wfCanvasWrap = $('#wfCanvasWrap');
+  const wfWorld = $('#wfWorld');
+  const wfNodesLayer = $('#wfNodesLayer');
+  const wfEdgesSvg = $('#wfEdgesSvg');
+  const wfPreviewPath = $('#wfPreviewPath');
+  const wfZoomPct = $('#wfZoomPct');
+  const wfToastEl = $('#wfToast');
+  const wfRunLog = $('#wfRunLog');
+  const wfInspectorBody = $('#wfInspectorBody');
+  const wfSelId = $('#wfSelId');
+
+  const wfState = {
+    nodes: new Map(),
+    edges: new Map(),
+    selectedNodeId: null,
+    scale: 1,
+    panX: 0,
+    panY: 0,
+    draggingNodeId: null,
+    dragOffset: {x:0,y:0},
+    panning: false,
+    panStart: {x:0,y:0, panX:0, panY:0},
+    connecting: null, // {fromNodeId, fromPort}
+    hoverPortEl: null,
+    running: false,
+  };
+
+  function wfToast(msg){
+    wfToastEl.textContent = msg;
+    wfToastEl.classList.add('show');
+    clearTimeout(wfToast._t);
+    wfToast._t = setTimeout(() => wfToastEl.classList.remove('show'), 1400);
+  }
+
+  function wfLog(msg){
+    const t = new Date();
+    const ts = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
+    wfRunLog.textContent += `[${ts}] ${msg}\n`;
+    wfRunLog.scrollTop = wfRunLog.scrollHeight;
+  }
+
+  function applyWfTransform(){
+    wfWorld.style.transform = `translate(${wfState.panX}px, ${wfState.panY}px) scale(${wfState.scale})`;
+    wfZoomPct.textContent = Math.round(wfState.scale*100) + '%';
+    renderWfEdges();
+  }
+
+  function wfScreenToWorld(sx, sy){
+    const rect = wfCanvasWrap.getBoundingClientRect();
+    return { x: (sx - rect.left - wfState.panX)/wfState.scale, y: (sy - rect.top - wfState.panY)/wfState.scale };
+  }
+
+  function nodeDefaults(type){
+    if(type==='start') return { title:'开始', inputs:[], outputs:[{name:'input', type:'str'}], data:{} };
+    if(type==='end') return { title:'结束', inputs:[{name:'output', type:'str'}], outputs:[], data:{} };
+    if(type==='wait') return { title:'time_wait', inputs:[{name:'in', type:'str'}], outputs:[{name:'out', type:'str'}], data:{ seconds: 1, message:'success' } };
+    if(type==='llm') return { title:'大模型', inputs:[{name:'input', type:'str'}], outputs:[{name:'output', type:'str'}], data:{ model:'gpt-4.1-mini', temperature:0.7, prompt:'你是一个有帮助的助手。' } };
+    return { title:'节点', inputs:[{name:'in', type:'str'}], outputs:[{name:'out', type:'str'}], data:{} };
+  }
+
+  function addWfNode(type, wx, wy){
+    const id = uid('n');
+    const def = nodeDefaults(type);
+    const node = { id, type, title:def.title, x:wx, y:wy, inputs:def.inputs, outputs:def.outputs, data:def.data, status:'idle' };
+    wfState.nodes.set(id, node);
+    renderWfNode(node);
+    setDirty(true);
+    selectWfNode(id);
+    return id;
+  }
+
+  function addWfEdge(fromNodeId, fromPortName, toNodeId, toPortName){
+    if(fromNodeId === toNodeId){ wfToast('不允许连接到自身（Demo）'); return null; }
+
+    for(const e of wfState.edges.values()){
+      if(e.from.nodeId===fromNodeId && e.from.port===fromPortName && e.to.nodeId===toNodeId && e.to.port===toPortName){
+        wfToast('已存在相同连线');
+        return null;
+      }
+    }
+
+    const id = uid('e');
+    wfState.edges.set(id, { id, from:{nodeId:fromNodeId, port:fromPortName}, to:{nodeId:toNodeId, port:toPortName} });
+    renderWfEdges();
+    setDirty(true);
+    return id;
+  }
+
+  function removeWfNode(nodeId){
+    for(const [eid, e] of [...wfState.edges.entries()]){
+      if(e.from.nodeId===nodeId || e.to.nodeId===nodeId) wfState.edges.delete(eid);
+    }
+    wfState.nodes.delete(nodeId);
+    const el = document.querySelector(`.node[data-wf-id="${nodeId}"]`);
+    if(el) el.remove();
+    if(wfState.selectedNodeId===nodeId) selectWfNode(null);
+    renderWfEdges();
+    setDirty(true);
+    wfLog(`删除节点：${nodeId}`);
+  }
+
+  function renderWfNode(node){
+    let el = document.querySelector(`.node[data-wf-id="${node.id}"]`);
+    if(!el){
+      el = document.createElement('div');
+      el.className = 'node';
+      el.dataset.wfId = node.id;
+
+      el.innerHTML = `
+        <div class="node-header">
+          <div class="node-title">
+            <span class="badge">${esc(node.type)}</span>
+            <span class="title-text">${esc(node.title)}</span>
+          </div>
+          <div class="node-actions">
+            <span class="run-badge" data-role="status">idle</span>
+            <button class="iconbtn danger" data-act="delete" title="删除节点">🗑</button>
+          </div>
+        </div>
+        <div class="node-body">
+          <div class="io-col" data-role="in"></div>
+          <div class="io-col" data-role="out"></div>
+        </div>
+      `;
+
+      wfNodesLayer.appendChild(el);
+
+      // delete btn
+      el.querySelector('[data-act="delete"]').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        removeWfNode(node.id);
+      });
+
+      // select + drag (avoid port/btn)
+      el.addEventListener('mousedown', (ev) => {
+        if(ev.button !== 0) return;
+        const t = ev.target;
+        if(t && t.classList && t.classList.contains('port')) return;
+        if(t && t.closest && t.closest('[data-act="delete"]')) return;
+
+        selectWfNode(node.id);
+        const w = wfScreenToWorld(ev.clientX, ev.clientY);
+        wfState.draggingNodeId = node.id;
+        wfState.dragOffset.x = w.x - node.x;
+        wfState.dragOffset.y = w.y - node.y;
+        ev.stopPropagation();
+      });
+
+      el.addEventListener('dragstart', (e)=>e.preventDefault());
+    }
+
+    el.style.left = node.x + 'px';
+    el.style.top  = node.y + 'px';
+    el.querySelector('.title-text').textContent = node.title;
+    el.querySelector('.badge').textContent = node.type;
+
+    const statusEl = el.querySelector('[data-role="status"]');
+    statusEl.textContent = node.status;
+    statusEl.className = 'run-badge ' + (node.status==='running'?'running':node.status==='success'?'success':node.status==='error'?'error':'');
+
+    const inCol = el.querySelector('[data-role="in"]');
+    const outCol = el.querySelector('[data-role="out"]');
+    inCol.innerHTML = '';
+    outCol.innerHTML = '';
+
+    const mkRow = (kind, port) => {
+      const row = document.createElement('div');
+      row.className = 'io-pill';
+      row.innerHTML = `
+        <span style="display:flex;align-items:center;gap:8px;">
+          ${kind==='in' ? `<span class="port in" data-kind="in" data-port="${esc(port.name)}"></span>` : ''}
+          <span>${esc(port.type)}: ${esc(port.name)}</span>
+          ${kind==='out' ? `<span class="port out" data-kind="out" data-port="${esc(port.name)}"></span>` : ''}
+        </span>
+      `;
+      const portEl = row.querySelector('.port');
+      if(portEl){
+        portEl.addEventListener('mousedown', (ev) => {
+          ev.stopPropagation();
+          if(ev.button !== 0) return;
+          if(portEl.dataset.kind !== 'out') return;
+
+          selectWfNode(node.id);
+          wfState.connecting = { fromNodeId: node.id, fromPort: portEl.dataset.port };
+          renderWfPreview(ev.clientX, ev.clientY);
+        });
+
+        portEl.addEventListener('mouseenter', () => {
+          if(wfState.connecting && portEl.dataset.kind === 'in'){
+            portEl.classList.add('hit');
+            wfState.hoverPortEl = portEl;
+          }
+        });
+        portEl.addEventListener('mouseleave', () => {
+          portEl.classList.remove('hit');
+          if(wfState.hoverPortEl === portEl) wfState.hoverPortEl = null;
+        });
+
+        portEl.addEventListener('mouseup', (ev) => {
+          if(!wfState.connecting) return;
+          if(portEl.dataset.kind !== 'in') return;
+          ev.stopPropagation();
+
+          const toNodeId = node.id;
+          const toPort = portEl.dataset.port;
+
+          // type check (simple)
+          const fromNode = wfState.nodes.get(wfState.connecting.fromNodeId);
+          const outPort = (fromNode.outputs||[]).find(p => p.name === wfState.connecting.fromPort);
+          const inPort = (node.inputs||[]).find(p => p.name === toPort);
+          if(outPort && inPort && outPort.type !== inPort.type){
+            wfToast(`类型不匹配：${outPort.type} → ${inPort.type}`);
+            cancelWfConnect();
+            return;
+          }
+
+          addWfEdge(wfState.connecting.fromNodeId, wfState.connecting.fromPort, toNodeId, toPort);
+          cancelWfConnect();
+        });
+      }
+      return row;
+    };
+
+    const inLabel = document.createElement('div');
+    inLabel.className = 'io-label';
+    inLabel.innerHTML = `<span>输入</span><span class="kbd">${(node.inputs||[]).length}</span>`;
+    inCol.appendChild(inLabel);
+    (node.inputs||[]).forEach(p => inCol.appendChild(mkRow('in', p)));
+
+    const outLabel = document.createElement('div');
+    outLabel.className = 'io-label';
+    outLabel.innerHTML = `<span>输出</span><span class="kbd">${(node.outputs||[]).length}</span>`;
+    outCol.appendChild(outLabel);
+    (node.outputs||[]).forEach(p => outCol.appendChild(mkRow('out', p)));
+  }
+
+  function clearWfEdges(){
+    [...wfEdgesSvg.querySelectorAll('path')].filter(p => p.id !== 'wfPreviewPath').forEach(p => p.remove());
+  }
+
+  function getWfPortWorldPos(nodeId, portKind, portName){
+    const nodeEl = document.querySelector(`.node[data-wf-id="${nodeId}"]`);
+    if(!nodeEl) return null;
+    const portEl = nodeEl.querySelector(`.port.${portKind}[data-port="${CSS.escape(portName)}"]`);
+    if(!portEl) return null;
+    const r = portEl.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+    return wfScreenToWorld(cx, cy);
+  }
+
+  function cubicPath(x1,y1,x2,y2){
+    const dx = Math.max(60, Math.abs(x2-x1)*0.35);
+    const c1x = x1 + dx, c1y = y1;
+    const c2x = x2 - dx, c2y = y2;
+    return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
+  }
+
+  function renderWfEdges(){
+    clearWfEdges();
+    for(const e of wfState.edges.values()){
+      const a = getWfPortWorldPos(e.from.nodeId, 'out', e.from.port);
+      const b = getWfPortWorldPos(e.to.nodeId, 'in', e.to.port);
+      if(!a || !b) continue;
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('class','edge-path ok');
+      path.setAttribute('d', cubicPath(a.x, a.y, b.x, b.y));
+      wfEdgesSvg.appendChild(path);
+    }
+  }
+
+  function renderWfPreview(screenX, screenY){
+    if(!wfState.connecting){ wfPreviewPath.setAttribute('d',''); return; }
+    const from = getWfPortWorldPos(wfState.connecting.fromNodeId, 'out', wfState.connecting.fromPort);
+    if(!from){ wfPreviewPath.setAttribute('d',''); return; }
+    const to = wfScreenToWorld(screenX, screenY);
+    wfPreviewPath.setAttribute('d', cubicPath(from.x, from.y, to.x, to.y));
+  }
+
+  function cancelWfConnect(){
+    wfState.connecting = null;
+    wfPreviewPath.setAttribute('d','');
+    if(wfState.hoverPortEl){
+      wfState.hoverPortEl.classList.remove('hit');
+      wfState.hoverPortEl = null;
+    }
+  }
+
+  function selectWfNode(nodeId){
+    wfState.selectedNodeId = nodeId;
+    document.querySelectorAll('.node[data-wf-id]').forEach(el => el.classList.toggle('selected', el.dataset.wfId === nodeId));
+
+    if(!nodeId){
+      wfSelId.textContent = '未选中';
+      wfInspectorBody.textContent = '点击画布节点查看/编辑参数。';
+      return;
+    }
+    wfSelId.textContent = nodeId;
+    const node = wfState.nodes.get(nodeId);
+    wfInspectorBody.innerHTML = buildWfInspector(node);
+    wireWfInspector(node);
+  }
+
+  function buildWfInspector(node){
+    const common = `
+      <div class="field" style="margin-top:10px">
+        <label>节点标题</label>
+        <input id="wf_f_title" value="${esc(node.title)}" />
+      </div>
+      <div class="field">
+        <label>节点类型</label>
+        <input value="${esc(node.type)}" disabled />
+      </div>
+    `;
+    if(node.type === 'wait'){
+      return `
+        <div class="small"><span class="pill">延时节点参数</span></div>
+        ${common}
+        <div class="field">
+          <label>seconds</label>
+          <input id="wf_f_seconds" type="number" min="0" step="1" value="${esc(String(node.data.seconds ?? 1))}" />
+        </div>
+        <div class="field">
+          <label>message</label>
+          <input id="wf_f_message" value="${esc(node.data.message ?? 'success')}" />
+        </div>
+      `;
+    }
+    if(node.type === 'llm'){
+      return `
+        <div class="small"><span class="pill">大模型节点参数（Demo）</span></div>
+        ${common}
+        <div class="field">
+          <label>model</label>
+          <select id="wf_f_model">
+            ${['gpt-4.1-mini','gpt-4.1','gpt-4o-mini','gpt-4o'].map(m => `
+              <option value="${esc(m)}" ${node.data.model===m?'selected':''}>${esc(m)}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>temperature</label>
+          <input id="wf_f_temp" type="number" min="0" max="2" step="0.1" value="${esc(String(node.data.temperature ?? 0.7))}" />
+        </div>
+        <div class="field">
+          <label>prompt</label>
+          <textarea id="wf_f_prompt" style="min-height:90px">${esc(node.data.prompt ?? '')}</textarea>
+        </div>
+      `;
+    }
+    return `
+      <div class="small"><span class="pill">通用节点参数</span></div>
+      ${common}
+      <div class="field">
+        <label>备注（Demo）</label>
+        <textarea id="wf_f_note" style="min-height:90px">${esc(node.data.note ?? '')}</textarea>
+      </div>
+    `;
+  }
+
+  function wireWfInspector(node){
+    const title = $('#wf_f_title');
+    if(title){
+      title.addEventListener('input', () => {
+        node.title = title.value.trim() || node.title;
+        renderWfNode(node);
+        renderWfEdges();
+        setDirty(true);
+      });
+    }
+    if(node.type==='wait'){
+      const sec = $('#wf_f_seconds');
+      const msg = $('#wf_f_message');
+      if(sec) sec.addEventListener('input', () => { node.data.seconds = Math.max(0, parseInt(sec.value||'0',10)); setDirty(true); });
+      if(msg) msg.addEventListener('input', () => { node.data.message = msg.value; setDirty(true); });
+    }
+    if(node.type==='llm'){
+      const model = $('#wf_f_model');
+      const temp = $('#wf_f_temp');
+      const prompt = $('#wf_f_prompt');
+      if(model) model.addEventListener('change', () => { node.data.model = model.value; setDirty(true); });
+      if(temp) temp.addEventListener('input', () => { node.data.temperature = parseFloat(temp.value||'0.7'); setDirty(true); });
+      if(prompt) prompt.addEventListener('input', () => { node.data.prompt = prompt.value; setDirty(true); });
+    }
+    const note = $('#wf_f_note');
+    if(note) note.addEventListener('input', () => { node.data.note = note.value; setDirty(true); });
+  }
+
+  // palette drag
+  $$('#wfPalette .node-item[draggable="true"]').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', item.dataset.type);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+
+  wfCanvasWrap.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+  wfCanvasWrap.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('text/plain');
+    if(!type) return;
+    const w = wfScreenToWorld(e.clientX, e.clientY);
+    addWfNode(type, w.x - 115, w.y - 45);
+    wfToast(`已添加节点：${type}`);
+  });
+
+  // canvas interactions
+  wfCanvasWrap.addEventListener('mousedown', (ev) => {
+    if(ev.button !== 0) return;
+    if(ev.target === wfCanvasWrap || ev.target === wfWorld || ev.target === wfNodesLayer || ev.target === wfEdgesSvg){
+      wfState.panning = true;
+      wfState.panStart.x = ev.clientX;
+      wfState.panStart.y = ev.clientY;
+      wfState.panStart.panX = wfState.panX;
+      wfState.panStart.panY = wfState.panY;
+      selectWfNode(null);
+    }
+  });
+
+  window.addEventListener('mousemove', (ev) => {
+    if(wfState.draggingNodeId){
+      const node = wfState.nodes.get(wfState.draggingNodeId);
+      if(node){
+        const w = wfScreenToWorld(ev.clientX, ev.clientY);
+        node.x = w.x - wfState.dragOffset.x;
+        node.y = w.y - wfState.dragOffset.y;
+        renderWfNode(node);
+        renderWfEdges();
+        setDirty(true);
+      }
+      return;
+    }
+    if(wfState.panning){
+      const dx = ev.clientX - wfState.panStart.x;
+      const dy = ev.clientY - wfState.panStart.y;
+      wfState.panX = wfState.panStart.panX + dx;
+      wfState.panY = wfState.panStart.panY + dy;
+      applyWfTransform();
+      return;
+    }
+    if(wfState.connecting){
+      renderWfPreview(ev.clientX, ev.clientY);
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if(wfState.draggingNodeId){ wfState.draggingNodeId=null; return; }
+    if(wfState.panning){ wfState.panning=false; return; }
+    if(wfState.connecting){ cancelWfConnect(); }
+  });
+
+  wfCanvasWrap.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const delta = -ev.deltaY;
+    const factor = delta > 0 ? 1.08 : 1/1.08;
+
+    const before = wfScreenToWorld(ev.clientX, ev.clientY);
+    const newScale = clamp(wfState.scale * factor, 0.35, 2.5);
+
+    const rect = wfCanvasWrap.getBoundingClientRect();
+    const sx = ev.clientX - rect.left;
+    const sy = ev.clientY - rect.top;
+
+    wfState.scale = newScale;
+    wfState.panX = sx - before.x * newScale;
+    wfState.panY = sy - before.y * newScale;
+    applyWfTransform();
+  }, {passive:false});
+
+  wfCanvasWrap.addEventListener('click', (ev) => {
+    if(ev.target === wfCanvasWrap || ev.target === wfWorld || ev.target === wfNodesLayer || ev.target === wfEdgesSvg){
+      selectWfNode(null);
+      cancelWfConnect();
+    }
+  });
+
+  // workflow buttons
+  $('#wfZoomIn').addEventListener('click', () => { wfState.scale = clamp(wfState.scale*1.12, 0.35, 2.5); applyWfTransform(); });
+  $('#wfZoomOut').addEventListener('click', () => { wfState.scale = clamp(wfState.scale/1.12, 0.35, 2.5); applyWfTransform(); });
+  $('#wfFit').addEventListener('click', () => { wfState.scale=1; wfState.panX=0; wfState.panY=0; applyWfTransform(); wfToast('已适配视图（重置）'); });
+  $('#wfAddNode').addEventListener('click', () => {
+    const rect = wfCanvasWrap.getBoundingClientRect();
+    const w = wfScreenToWorld(rect.left + rect.width/2, rect.top + rect.height/2);
+    addWfNode('llm', w.x - 115, w.y - 45);
+    wfToast('已添加一个“大模型”节点');
+  });
+
+  // delete key
+  window.addEventListener('keydown', (ev) => {
+    if(ev.key === 'Escape') cancelWfConnect();
+    if(ev.key === 'Delete' || ev.key === 'Backspace'){
+      const tag = document.activeElement && document.activeElement.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if(wfState.selectedNodeId){
+        removeWfNode(wfState.selectedNodeId);
+        wfToast('已删除节点');
+      }
+    }
+  });
+
+  // workflow run
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function runWorkflow(){
+    if(wfState.running) return;
+    wfState.running = true;
+
+    // reset
+    for(const n of wfState.nodes.values()){ n.status='idle'; renderWfNode(n); }
+    renderWfEdges();
+    wfLog('试运行：开始');
+
+    const start = [...wfState.nodes.values()].find(n => n.type==='start');
+    if(!start){
+      wfToast('缺少开始节点');
+      wfState.running=false;
+      return;
+    }
+
+    const nextOf = (nodeId) => {
+      for(const e of wfState.edges.values()){
+        if(e.from.nodeId === nodeId) return e.to.nodeId;
+      }
+      return null;
+    };
+
+    let current = start.id;
+    const visited = new Set();
+    while(current){
+      if(visited.has(current)){
+        wfToast('检测到循环（Demo）');
+        wfLog('试运行：检测到循环，停止');
+        break;
+      }
+      visited.add(current);
+
+      const node = wfState.nodes.get(current);
+      if(!node) break;
+
+      node.status='running';
+      renderWfNode(node);
+      selectWfNode(node.id);
+      wfLog(`执行节点：${node.title} (${node.type})`);
+
+      let delayMs = 420;
+      if(node.type==='wait') delayMs = Math.max(0, (node.data.seconds ?? 1) * 450);
+      if(node.type==='llm') delayMs = 900;
+
+      await sleep(delayMs);
+
+      node.status='success';
+      renderWfNode(node);
+
+      current = nextOf(node.id);
+    }
+
+    wfLog('试运行：结束');
+    wfState.running=false;
+
+    // after running, return to agent debug if you want
+    // (keep as is; user can switch tabs)
+  }
+
+  // init workflow graph
+  function initWorkflow(){
+    // clear
+    wfState.nodes.clear();
+    wfState.edges.clear();
+    wfNodesLayer.innerHTML = '';
+    wfRunLog.textContent = '';
+
+    const startId = addWfNode('start', 180, 220);
+    const waitId  = addWfNode('wait', 470, 200);
+    const llmId   = addWfNode('llm', 780, 200);
+    const endId   = addWfNode('end', 1100, 220);
+
+    addWfEdge(startId,'input', waitId,'in');
+    addWfEdge(waitId,'out', llmId,'input');
+    addWfEdge(llmId,'output', endId,'output');
+
+    setDirty(false);
+    selectWfNode(llmId);
+
+    wfState.scale=1; wfState.panX=0; wfState.panY=0;
+    applyWfTransform();
+
+    wfLog('Demo 已初始化：开始 → time_wait → 大模型 → 结束');
+  }
+  initWorkflow();
+
+  // =========================
+  // Knowledge base page (upload + simple list + mock search)
+  // =========================
+  const dropZone = $('#dropZone');
+  const kbFilesInput = $('#kbFiles');
+  const fileList = $('#fileList');
+  const kbSummary = $('#kbSummary');
+  const kbLog = $('#kbLog');
+
+  let kbFiles = []; // File objects (in-memory)
+
+  function fmtBytes(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    const kb = bytes/1024;
+    if(kb < 1024) return kb.toFixed(1) + ' KB';
+    const mb = kb/1024;
+    return mb.toFixed(1) + ' MB';
+  }
+
+  function renderFiles(){
+    const name = $('#kbName').value.trim() || 'kb_demo';
+    kbSummary.textContent = `当前：${name}（${kbFiles.length} 个文件）`;
+
+    fileList.innerHTML = kbFiles.length ? '' : `<div class="small">尚未上传文件</div>`;
+    kbFiles.forEach((f, idx) => {
+      const el = document.createElement('div');
+      el.className = 'fileitem';
+      el.innerHTML = `
+        <div class="filemeta">
+          <div class="n">${esc(f.name)}</div>
+          <div class="d">${esc(f.type || 'unknown')} · ${esc(fmtBytes(f.size))}</div>
+        </div>
+        <button class="btn ghost" data-idx="${idx}" title="移除">移除</button>
+      `;
+      el.querySelector('button').addEventListener('click', () => {
+        kbFiles.splice(idx, 1);
+        renderFiles();
+        setDirty(true);
+      });
+      fileList.appendChild(el);
+    });
+  }
+
+  function addFiles(list){
+    const arr = [...list];
+    // naive de-dup by name+size
+    for(const f of arr){
+      if(kbFiles.some(x => x.name===f.name && x.size===f.size)) continue;
+      kbFiles.push(f);
+    }
+    renderFiles();
+    setDirty(true);
+  }
+
+  $('#btnPickFiles').addEventListener('click', () => kbFilesInput.click());
+  kbFilesInput.addEventListener('change', () => {
+    if(kbFilesInput.files && kbFilesInput.files.length) addFiles(kbFilesInput.files);
+    kbFilesInput.value = '';
+  });
+
+  $('#btnClearFiles').addEventListener('click', () => {
+    kbFiles = [];
+    renderFiles();
+    setDirty(true);
+  });
+
+  // drag/drop
+  ;['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZone.style.background = 'rgba(91,92,246,.07)';
+  }));
+  ;['dragleave','drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZone.style.background = 'rgba(91,92,246,.04)';
+  }));
+
+  dropZone.addEventListener('drop', (e) => {
+    if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+      addFiles(e.dataTransfer.files);
+    }
+  });
+
+  $('#kbName').addEventListener('input', () => { renderFiles(); setDirty(true); });
+  $('#kbDesc').addEventListener('input', () => setDirty(true));
+
+  $('#btnCreateKb').addEventListener('click', () => {
+    setDirty(false);
+    const name = $('#kbName').value.trim() || 'kb_demo';
+    kbLog.textContent += `已保存知识库：${name}（文件数：${kbFiles.length}）\n`;
+    kbLog.scrollTop = kbLog.scrollHeight;
+
+    // also sync agent KB select if same name exists? keep simple:
+    // if user created a new name, inject into agent selector (demo)
+    const sel = $('#kbSelect');
+    if(![...sel.options].some(o => o.value === name)){
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.insertBefore(opt, sel.firstChild);
+      sel.value = name;
+      syncChips();
+    }
+  });
+
+  $('#btnBackToAgent').addEventListener('click', () => setPage('agent'));
+
+  $('#btnKbSearch').addEventListener('click', () => {
+    const q = ($('#kbQuery').value || '').trim();
+    if(!q){
+      kbLog.textContent += `请输入问题后再检索（Demo）。\n`;
+      kbLog.scrollTop = kbLog.scrollHeight;
+      return;
+    }
+    const name = $('#kbName').value.trim() || 'kb_demo';
+    const hit = kbFiles.length ? kbFiles[Math.floor(Math.random()*kbFiles.length)].name : '(无文件)';
+    kbLog.textContent += `检索：${q}\n命中：${hit}\n（Demo）返回：基于 ${name} 的模拟摘要。\n\n`;
+    kbLog.scrollTop = kbLog.scrollHeight;
+  });
+
+  renderFiles();
+
+  // =========================
+  // Cross links
+  // =========================
+  $('#btnOpenWorkflowFromAgent').addEventListener('click', () => setPage('workflow'));
+  $('#btnOpenKbFromAgent').addEventListener('click', () => setPage('kb'));
+
+  // When KB selection changes on agent, keep chips updated
+  function syncChips(){
+    $('#chipWorkflow').textContent = $('#workflowSelect').value;
+    $('#chipKb').textContent = $('#kbSelect').value;
+    $('#chipKbOn').textContent = $('#useKb').value.toUpperCase();
+  }
+
+})();
+</script>
+</body>
+</html>

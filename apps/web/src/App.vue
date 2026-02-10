@@ -1,5 +1,6 @@
 ﻿<template>
-  <div class="app-shell">
+  <RouterView v-if="isWorkflowPage" />
+  <div v-else class="app-shell">
     <LeftNav />
     <div class="content-shell">
       <TopBar />
@@ -11,6 +12,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 import LeftNav from "@/components/layout/LeftNav.vue";
 import TopBar from "@/components/layout/TopBar.vue";
+
+const route = useRoute();
+const isWorkflowPage = computed(() => route.path.startsWith("/studio/workflow/"));
 </script>
