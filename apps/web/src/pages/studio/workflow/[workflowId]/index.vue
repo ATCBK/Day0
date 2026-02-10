@@ -1,11 +1,11 @@
 ﻿<template>
   <section class="workflow-page">
-    <header class="workflow-header">
-      <div>
-        <h3>Workflow Studio: {{ workflowStore.workflowId }}</h3>
-        <span class="dirty" v-if="workflowStore.dirty">未保存</span>
+    <header class="workflow-header panel">
+      <div class="header-left">
+        <h3>Workflow Studio / {{ workflowStore.workflowId }}</h3>
+        <span class="dirty" v-if="workflowStore.dirty">Unsaved Changes</span>
       </div>
-      <el-button size="small" @click="workflowStore.save">保存到本地</el-button>
+      <el-button size="small" type="primary" @click="workflowStore.save">保存到本地</el-button>
     </header>
 
     <div class="workflow-main">
@@ -117,28 +117,39 @@ function onDeleteKey(event: KeyboardEvent) {
   display: grid;
   grid-template-rows: auto 1fr 250px;
   gap: 12px;
-  height: calc(100vh - 110px);
+  height: calc(100vh - 94px);
 }
 
 .workflow-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 10px 14px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .workflow-header h3 {
   margin: 0;
+  font-size: 16px;
 }
 
 .dirty {
-  color: #f59e0b;
+  color: var(--warn);
   font-size: 12px;
-  margin-left: 8px;
+  border: 1px solid #ecc68c;
+  background: #fff4df;
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
 .workflow-main {
   display: grid;
-  grid-template-columns: 220px 1fr 320px;
+  grid-template-columns: 240px 1fr 340px;
   gap: 12px;
   min-height: 0;
 }
@@ -152,7 +163,7 @@ function onDeleteKey(event: KeyboardEvent) {
 
 @media (max-width: 1280px) {
   .workflow-main {
-    grid-template-columns: 200px 1fr 280px;
+    grid-template-columns: 220px 1fr 300px;
   }
 }
 

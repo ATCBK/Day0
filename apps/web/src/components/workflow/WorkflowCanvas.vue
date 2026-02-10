@@ -95,15 +95,16 @@ function resetZoom() {
 <style scoped>
 .canvas-panel {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   position: relative;
   height: 100%;
   overflow: hidden;
-  background-color: #f7f9fc;
+  background-color: #f8fafc;
   background-image:
-    linear-gradient(to right, rgba(180, 192, 210, 0.24) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(180, 192, 210, 0.24) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(to right, rgba(100, 116, 139, 0.16) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(100, 116, 139, 0.16) 1px, transparent 1px);
+  background-size: 22px 22px;
+  box-shadow: var(--shadow-sm);
 }
 
 .zoom-controls {
@@ -116,10 +117,15 @@ function resetZoom() {
 }
 
 .zoom-controls button {
-  border: 1px solid #d0d9e5;
+  border: 1px solid var(--line-strong);
   background: #fff;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 8px;
+  padding: 6px 9px;
   cursor: pointer;
+  color: #223041;
+}
+
+.zoom-controls button:hover {
+  background: #f2f6fa;
 }
 </style>

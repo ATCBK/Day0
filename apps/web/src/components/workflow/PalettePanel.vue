@@ -1,6 +1,9 @@
 ﻿<template>
-  <div class="palette-panel">
-    <div class="panel-title">Node Palette</div>
+  <div class="palette-panel panel">
+    <div class="panel-head">
+      <div class="panel-title">Node Palette</div>
+      <span class="panel-sub">Click or Drag</span>
+    </div>
     <div class="node-list">
       <button
         v-for="item in nodeItems"
@@ -45,14 +48,22 @@ function onDragStart(event: DragEvent, nodeType: NodeType) {
 .palette-panel {
   height: 100%;
   padding: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .panel-title {
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.panel-sub {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .node-list {
@@ -63,16 +74,26 @@ function onDragStart(event: DragEvent, nodeType: NodeType) {
 
 .node-item {
   text-align: left;
-  border: 1px solid #dce2eb;
-  background: #f8fafc;
-  border-radius: 6px;
-  padding: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  border-radius: 10px;
+  padding: 10px;
   cursor: pointer;
+  transition: 0.12s ease;
+}
+
+.node-item:hover {
+  border-color: var(--line-strong);
+  background: #f3f7fb;
+}
+
+.node-item span {
+  font-weight: 600;
 }
 
 .node-item small {
   display: block;
-  color: #64748b;
+  color: var(--muted);
   margin-top: 4px;
 }
 </style>

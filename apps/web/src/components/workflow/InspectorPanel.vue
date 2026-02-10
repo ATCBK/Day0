@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="inspector-panel">
+  <div class="inspector-panel panel">
     <div class="panel-title">Inspector</div>
 
     <div v-if="!node" class="empty">选择一个节点以编辑配置</div>
@@ -128,25 +128,26 @@ function removeMapping(index: number) {
 .inspector-panel {
   height: 100%;
   padding: 12px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 8px;
   overflow: auto;
 }
 
 .panel-title {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 12px;
 }
 
 .empty {
-  color: #64748b;
+  color: var(--muted);
 }
 
 .node-meta {
   margin-bottom: 10px;
   font-size: 12px;
-  color: #475569;
+  color: #45556a;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
 }
 
 .mapping-list {

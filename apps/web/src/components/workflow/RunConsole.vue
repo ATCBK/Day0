@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="run-console">
+  <div class="run-console panel">
     <div class="header">
       <div>
         <b>Run Console</b>
@@ -32,8 +32,10 @@
     <div class="section" v-if="runStore.finalResult">
       <div class="title">Final Result</div>
       <div class="result-text">{{ runStore.finalResult.text }}</div>
-      <div v-if="runStore.finalResult.citations?.length" class="citations">
-        <div v-for="c in runStore.finalResult.citations" :key="c.chunkId" class="citation-row">
+      <div class="citations">
+        <div class="title tiny">Citations</div>
+        <div v-if="!runStore.finalResult.citations?.length" class="empty">无引用</div>
+        <div v-for="c in runStore.finalResult.citations || []" :key="c.chunkId" class="citation-row">
           {{ c.kbId }}/{{ c.chunkId }} ({{ c.score }})
         </div>
       </div>
@@ -66,9 +68,6 @@ async function onRun() {
 
 <style scoped>
 .run-console {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
   padding: 10px;
   height: 100%;
   display: flex;
@@ -85,27 +84,36 @@ async function onRun() {
 
 .tip {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
   margin-left: 8px;
 }
 
 .status {
   font-size: 12px;
   color: #475569;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+  border-radius: 8px;
+  padding: 6px 8px;
 }
 
 .section {
-  border-top: 1px dashed #d8dee8;
+  border-top: 1px dashed var(--line);
   padding-top: 8px;
 }
 
 .title {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 4px;
 }
 
+.title.tiny {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
 .empty {
-  color: #64748b;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -119,5 +127,9 @@ async function onRun() {
 .result-text {
   white-space: pre-wrap;
   font-size: 13px;
+  border: 1px solid var(--line);
+  background: #fbfcfe;
+  border-radius: 8px;
+  padding: 8px;
 }
 </style>
